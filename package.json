@@ -1,0 +1,22 @@
+{
+  "name": "smartclean-backend",
+  "version": "1.0.0",
+  "description": "SmartClean SIH backend API for OTP login, complaints, admin dashboard, and sanitation monitoring.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js",
+    "test": "npm run check"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.9.5",
+    "multer": "^2.3.0"
+  }
+}
