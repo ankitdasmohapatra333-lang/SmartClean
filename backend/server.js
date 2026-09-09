@@ -1,7 +1,3 @@
-const dns = require('dns');
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder('ipv4first');
-}
 const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -355,17 +351,25 @@ function upsertMemoryUser({ name, mobile, email, role = 'citizen' }) {
 async function findOrCreateUser({ name, mobile, email, role = 'citizen' }) {
   if (useMemoryStore()) return upsertMemoryUser({ name, mobile, email, role });
 
-  return User.findOneAndUpdate(
-    { mobile },
-    {
-      $setOnInsert: { mobile, role },
-      $set: {
-        ...(name ? { name } : {}),
-        ...(email ? { email } : {})
-      }
-    },
-    { new: true, upsert: true, runValidators: true }
-  );
+  try {
+    return await User.findOneAndUpdate(
+      { mobile },
+      {
+        $setOnInsert: { mobile, role },
+        $set: {
+          ...(name ? { name } : {}),
+          ...(email ? { email } : {})
+        }
+      },
+      { new: true, upsert: true, runValidators: true }
+    );
+  } catch (err) {
+    if (ALLOW_MEMORY_FALLBACK) {
+      console.warn('MongoDB query warning, using memory fallback:', err.message);
+      return upsertMemoryUser({ name, mobile, email, role });
+    }
+    throw err;
+  }
 }
 
 async function storeOtp(mobile, otp, sessionId = '') {
@@ -384,8 +388,18 @@ async function storeOtp(mobile, otp, sessionId = '') {
     return otpRecord;
   }
 
-  await OTP.deleteMany({ mobile });
-  return OTP.create(otpRecord);
+  try {
+    await OTP.deleteMany({ mobile });
+    return await OTP.create(otpRecord);
+  } catch (err) {
+    if (ALLOW_MEMORY_FALLBACK) {
+      console.warn('MongoDB OTP store warning, using memory fallback:', err.message);
+      memoryStore.otps = memoryStore.otps.filter((item) => item.mobile !== mobile);
+      memoryStore.otps.push({ ...otpRecord, _id: new mongoose.Types.ObjectId().toString() });
+      return otpRecord;
+    }
+    throw err;
+  }
 }
 
 async function verifyOtpRecord(mobile, otp) {
