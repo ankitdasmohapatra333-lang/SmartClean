@@ -1,5 +1,16 @@
 async function apiRequest(endpoint, options = {}) {
     const token = localStorage.getItem("smartclean_token");
+    const userStr = localStorage.getItem("smartclean_user");
+    let userMobile = "";
+
+    try {
+        if (userStr) {
+            const u = JSON.parse(userStr);
+            if (u && u.mobile) {
+                userMobile = String(u.mobile).trim();
+            }
+        }
+    } catch (e) {}
 
     const headers = {
         ...(options.headers || {})
@@ -20,6 +31,10 @@ async function apiRequest(endpoint, options = {}) {
 
     if (token) {
         headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    if (userMobile) {
+        headers["X-Citizen-Mobile"] = userMobile;
     }
 
     const response = await fetch(

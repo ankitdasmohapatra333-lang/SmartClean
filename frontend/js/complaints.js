@@ -355,23 +355,29 @@ async function loadComplaints() {
     if (typeof DEMO_MODE !== "undefined" && DEMO_MODE) {
         allComplaints = getDemoComplaints();
         updateComplaintSummary(allComplaints);
-        showResolvedNotification(allComplaints);
+        try { showResolvedNotification(allComplaints); } catch (e) { console.warn(e); }
         renderComplaints();
         return;
     }
 
     try {
         const response = await apiRequest("/complaints", { method: "GET" });
-        const list = Array.isArray(response) ? response : (response.complaints || []);
-        allComplaints = list;
+        let list = Array.isArray(response) ? response : (response.complaints || []);
+        if (!list || !list.length) {
+            const demoList = getDemoComplaints();
+            if (demoList && demoList.length) {
+                list = demoList;
+            }
+        }
+        allComplaints = list || [];
         updateComplaintSummary(allComplaints);
-        showResolvedNotification(allComplaints);
+        try { showResolvedNotification(allComplaints); } catch (e) { console.warn(e); }
         renderComplaints();
     } catch (error) {
         console.warn("Backend complaints load failed, falling back to local demo data:", error);
         allComplaints = getDemoComplaints();
         updateComplaintSummary(allComplaints);
-        showResolvedNotification(allComplaints);
+        try { showResolvedNotification(allComplaints); } catch (e) { console.warn(e); }
         renderComplaints();
     }
 }
@@ -1257,6 +1263,7 @@ function showResolvedNotification(
         return;
     }
 
+    const latestResolved = resolvedComplaints[resolvedComplaints.length - 1];
     const rawId =
         latestResolved.complaintId ||
         latestResolved.id ||

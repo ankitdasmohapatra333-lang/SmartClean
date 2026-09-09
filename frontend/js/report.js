@@ -978,12 +978,13 @@ if (
         */
 
         if (photos.length > 0) {
-
+            photos.forEach(function (file) {
+                formData.append("photos", file);
+            });
             formData.append(
                 "photo",
                 photos[0]
             );
-
         }
 
 
