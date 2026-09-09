@@ -527,14 +527,10 @@ function viewComplaintPhoto(
     const complaint =
         currentAdminComplaints.find(
             function (c) {
-
-                const id =
-                    c.id ||
-                    c._id;
-
                 return (
-                    String(id) ===
-                    String(complaintId)
+                    String(c.complaintId || "") === String(complaintId) ||
+                    String(c.id || "") === String(complaintId) ||
+                    String(c._id || "") === String(complaintId)
                 );
             }
         );
@@ -614,7 +610,7 @@ function getComplaintPhotos(
 
 
     /* =====================================================
-       SINGLE PHOTO
+       SINGLE PHOTO OR PHOTO ARRAY
     ===================================================== */
 
     if (
@@ -622,13 +618,18 @@ function getComplaintPhotos(
         complaint.photo
     ) {
 
-        if (
+        if (Array.isArray(complaint.photo)) {
+            photos = complaint.photo.filter(
+                p => typeof p === "string" && p.trim() !== ""
+            );
+        } else if (
             typeof complaint.photo ===
-            "string"
+            "string" &&
+            complaint.photo.trim() !== ""
         ) {
 
             photos = [
-                complaint.photo
+                complaint.photo.trim()
             ];
         }
     }
@@ -645,11 +646,12 @@ function getComplaintPhotos(
 
         if (
             typeof complaint.photoUrl ===
-            "string"
+            "string" &&
+            complaint.photoUrl.trim() !== ""
         ) {
 
             photos = [
-                complaint.photoUrl
+                complaint.photoUrl.trim()
             ];
         }
     }
@@ -693,6 +695,7 @@ function createPhotoModal(
 
 
     const complaintId =
+        complaint.complaintId ||
         complaint.id ||
         complaint._id ||
         "N/A";
