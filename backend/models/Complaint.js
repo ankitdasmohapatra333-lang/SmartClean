@@ -84,6 +84,28 @@ const complaintSchema = new mongoose.Schema(
       trim: true
     },
 
+    resolutionNote: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+
+    resolutionPhotos: {
+      type: [String],
+      default: []
+    },
+
+    resolutionProof: {
+      type: [String],
+      default: []
+    },
+
+    resolvedBy: {
+      type: String,
+      trim: true,
+      default: 'Admin'
+    },
+
     resolvedAt: {
       type: Date
     }

@@ -93,7 +93,14 @@ const complaintsTranslations = {
         footerTagline:
             "Report → Prioritize → Act → Resolve",
 
-        searchPlaceholder: "Search complaints..."
+        searchPlaceholder: "Search complaints...",
+
+        resolutionProofTitle: "After-Cleaning / Resolution Proof",
+        resolutionNote: "Resolution Remarks",
+        resolvedOn: "Resolved on",
+        resolvedByLabel: "Resolved by",
+        originalPhotos: "Original Complaint Photo(s)",
+        viewOnMap: "View on Google Maps"
     },
 
 
@@ -171,7 +178,14 @@ const complaintsTranslations = {
         footerTagline:
             "रिपोर्ट → प्राथमिकता → कार्रवाई → समाधान",
 
-        searchPlaceholder: "शिकायत खोजें..."
+        searchPlaceholder: "शिकायत खोजें...",
+
+        resolutionProofTitle: "सफाई के बाद / समाधान प्रमाण",
+        resolutionNote: "समाधान विवरण",
+        resolvedOn: "समाधान की तिथि",
+        resolvedByLabel: "द्वारा समाधान",
+        originalPhotos: "मूल शिकायत फोटो",
+        viewOnMap: "गूगल मैप पर देखें"
     },
 
 
@@ -258,7 +272,14 @@ const complaintsTranslations = {
             "ରିପୋର୍ଟ → ପ୍ରାଥମିକତା → କାର୍ଯ୍ୟ → ସମାଧାନ",
 
         searchPlaceholder:
-            "ଅଭିଯୋଗ ଖୋଜନ୍ତୁ..."
+            "ଅଭିଯୋଗ ଖୋଜନ୍ତୁ...",
+
+        resolutionProofTitle: "ସଫେଇ ପରେ / ସମାଧାନ ପ୍ରମାଣ",
+        resolutionNote: "ସମାଧାନ ବିବରଣୀ",
+        resolvedOn: "ସମାଧାନ ତାରିଖ",
+        resolvedByLabel: "ଦ୍ୱାରା ସମାଧାନ",
+        originalPhotos: "ମୂଳ ଅଭିଯୋଗ ଫଟୋ",
+        viewOnMap: "ଗୁଗୁଲ୍ ମ୍ୟାପ୍ ରେ ଦେଖନ୍ତୁ"
     }
 
 };
@@ -514,12 +535,14 @@ function createComplaintCard(c) {
         c.longitude !== null &&
         c.longitude !== "";
 
+    const originalPhotos =
+        getComplaintPhotos(c);
+
+    const resolutionPhotos =
+        getResolutionPhotos(c);
+
     const photoCount =
-        Array.isArray(c.photos)
-            ? c.photos.length
-            : c.photo
-                ? 1
-                : 0;
+        originalPhotos.length;
 
     const categoryText =
         c.category ||
@@ -532,6 +555,7 @@ function createComplaintCard(c) {
     const rawId =
         c.complaintId ||
         c.id ||
+        c._id ||
         "N/A";
 
     const displayComplaintId =
@@ -546,6 +570,8 @@ function createComplaintCard(c) {
             formattedDate = new Date(c.createdAt).toLocaleString();
         } catch (e) {}
     }
+
+    addCitizenResolutionStyles();
 
     return `
         <div
@@ -669,18 +695,37 @@ function createComplaintCard(c) {
                     ${
                         coordinatesAvailable
                             ? `
-                                <small class="text-muted">
-                                    ${escapeHTML(
-                                        String(
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <small class="text-muted">
+                                        ${escapeHTML(
+                                            String(
+                                                c.latitude
+                                            )
+                                        )},
+                                        ${escapeHTML(
+                                            String(
+                                                c.longitude
+                                            )
+                                        )}
+                                    </small>
+                                    <a
+                                        href="https://www.google.com/maps?q=${escapeAttribute(
                                             c.latitude
-                                        )
-                                    )},
-                                    ${escapeHTML(
-                                        String(
+                                        )},${escapeAttribute(
                                             c.longitude
-                                        )
-                                    )}
-                                </small>
+                                        )}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="btn btn-outline-success btn-sm py-0 px-2"
+                                        style="font-size: 11px;"
+                                    >
+                                        🗺️ ${escapeHTML(
+                                            getTranslation(
+                                                "viewOnMap"
+                                            )
+                                        )}
+                                    </a>
+                                </div>
                             `
                             : `
                                 <small class="text-muted">
@@ -698,31 +743,59 @@ function createComplaintCard(c) {
             </div>
 
 
+            <!-- ORIGINAL CITIZEN PHOTOS -->
             ${
                 photoCount > 0
                     ? `
-                        <div class="complaint-photo-info">
-
-                            📷
-
-                            <span>
-                                ${photoCount}
-                                ${
-                                    photoCount > 1
-                                        ? getTranslation(
-                                            "photos"
-                                        )
-                                        : getTranslation(
-                                            "photo"
-                                        )
-                                }
-                                ${escapeHTML(
+                        <div class="citizen-photos-section mt-3">
+                            <strong class="small text-muted d-block mb-1">
+                                📸 ${escapeHTML(
                                     getTranslation(
-                                        "attached"
+                                        "originalPhotos"
                                     )
-                                )}
-                            </span>
+                                )} (${photoCount}):
+                            </strong>
 
+                            <div class="citizen-photo-grid">
+                                ${originalPhotos
+                                    .map(
+                                        function (
+                                            p,
+                                            i
+                                        ) {
+                                            return `
+                                                <div
+                                                    class="citizen-photo-item"
+                                                    onclick="openFullPhoto('${escapeAttribute(
+                                                        normalizePhotoUrl(
+                                                            p
+                                                        )
+                                                    )}')"
+                                                >
+                                                    <img
+                                                        src="${escapeAttribute(
+                                                            normalizePhotoUrl(
+                                                                p
+                                                            )
+                                                        )}"
+                                                        alt="Complaint photo ${
+                                                            i +
+                                                            1
+                                                        }"
+                                                        onerror="this.style.display='none';"
+                                                    >
+                                                    <span>
+                                                        Photo ${
+                                                            i +
+                                                            1
+                                                        }
+                                                    </span>
+                                                </div>
+                                            `;
+                                        }
+                                    )
+                                    .join("")}
+                            </div>
                         </div>
                     `
                     : ""
@@ -734,31 +807,142 @@ function createComplaintCard(c) {
             </div>
 
 
+            <!-- RESOLUTION CARD -->
             ${
                 status === "Resolved"
                     ? `
-                        <div class="resolved-mini-message">
+                        <div class="citizen-resolution-card mt-3">
 
-                            <span>✅</span>
-
-                            <div>
-
-                                <strong>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="fs-5">✨</span>
+                                <h6 class="mb-0 text-success fw-bold">
                                     ${escapeHTML(
                                         getTranslation(
-                                            "complaintResolved"
+                                            "resolutionProofTitle"
                                         )
                                     )}
-                                </strong>
+                                </h6>
+                            </div>
 
-                                <p>
-                                    ${escapeHTML(
+                            ${
+                                c.resolutionNote
+                                    ? `
+                                        <div class="resolution-note-box mb-2">
+                                            <strong class="text-success small d-block mb-1">
+                                                📝 ${escapeHTML(
+                                                    getTranslation(
+                                                        "resolutionNote"
+                                                    )
+                                                )}:
+                                            </strong>
+                                            <p class="mb-0 text-dark">
+                                                ${escapeHTML(
+                                                    c.resolutionNote
+                                                )}
+                                            </p>
+                                        </div>
+                                    `
+                                    : `
+                                        <p class="mb-2 text-muted small">
+                                            ${escapeHTML(
+                                                getTranslation(
+                                                    "resolvedMessage"
+                                                )
+                                            )}
+                                        </p>
+                                    `
+                            }
+
+                            ${
+                                resolutionPhotos.length > 0
+                                    ? `
+                                        <div class="resolution-photos-gallery mb-2">
+                                            <strong class="text-success small d-block mb-1">
+                                                📸 ${escapeHTML(
+                                                    getTranslation(
+                                                        "resolutionProofTitle"
+                                                    )
+                                                )} (${
+                                                    resolutionPhotos.length
+                                                }):
+                                            </strong>
+
+                                            <div class="citizen-photo-grid">
+                                                ${resolutionPhotos
+                                                    .map(
+                                                        function (
+                                                            rp,
+                                                            i
+                                                        ) {
+                                                            return `
+                                                                <div
+                                                                    class="citizen-photo-item resolution-item"
+                                                                    onclick="openFullPhoto('${escapeAttribute(
+                                                                        normalizePhotoUrl(
+                                                                            rp
+                                                                        )
+                                                                    )}')"
+                                                                >
+                                                                    <img
+                                                                        src="${escapeAttribute(
+                                                                            normalizePhotoUrl(
+                                                                                rp
+                                                                            )
+                                                                        )}"
+                                                                        alt="Resolution Proof ${
+                                                                            i +
+                                                                            1
+                                                                        }"
+                                                                        onerror="this.style.display='none';"
+                                                                    >
+                                                                    <span class="text-success fw-bold">
+                                                                        Proof ${
+                                                                            i +
+                                                                            1
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                            `;
+                                                        }
+                                                    )
+                                                    .join("")}
+                                            </div>
+                                        </div>
+                                    `
+                                    : ""
+                            }
+
+                            <div class="resolution-footer-meta d-flex justify-content-between flex-wrap gap-2 text-muted small pt-2 border-top">
+                                ${
+                                    c.resolvedAt
+                                        ? `
+                                            <span>
+                                                📅 ${escapeHTML(
+                                                    getTranslation(
+                                                        "resolvedOn"
+                                                    )
+                                                )}:
+                                                ${escapeHTML(
+                                                    new Date(
+                                                        c.resolvedAt
+                                                    ).toLocaleString()
+                                                )}
+                                            </span>
+                                        `
+                                        : ""
+                                }
+
+                                <span>
+                                    🏛️ ${escapeHTML(
                                         getTranslation(
-                                            "resolvedMessage"
+                                            "resolvedByLabel"
                                         )
+                                    )}:
+                                    ${escapeHTML(
+                                        c.resolvedBy ||
+                                            "Sanitation Team"
                                     )}
-                                </p>
-
+                                </span>
                             </div>
 
                         </div>
@@ -1073,10 +1257,16 @@ function showResolvedNotification(
         return;
     }
 
-    const latestResolved =
-        resolvedComplaints[
-            resolvedComplaints.length - 1
-        ];
+    const rawId =
+        latestResolved.complaintId ||
+        latestResolved.id ||
+        latestResolved._id ||
+        "";
+
+    const displayId =
+        String(rawId).startsWith("Complaint ID:")
+            ? rawId
+            : `Complaint ID: ${rawId}`;
 
     notification.style.display =
         "flex";
@@ -1102,12 +1292,18 @@ function showResolvedNotification(
                         "resolvedText"
                     )
                 )}
-
-                <strong>
+                <strong class="d-inline-block ms-1">
                     ${escapeHTML(
-                        latestResolved.id || ""
+                        displayId
                     )}
                 </strong>
+                ${
+                    latestResolved.resolutionNote
+                        ? `<br><span class="text-muted fst-italic">"${escapeHTML(
+                            latestResolved.resolutionNote
+                        )}"</span>`
+                        : ""
+                }
             </p>
 
         </div>
@@ -1388,4 +1584,273 @@ function escapeHTML(value) {
             "'",
             "&#039;"
         );
+}
+
+
+/* =========================================================
+   SAFE ATTRIBUTE
+========================================================= */
+
+function escapeAttribute(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
+    }
+
+    return String(value)
+        .replaceAll(
+            "\\",
+            "\\\\"
+        )
+        .replaceAll(
+            "'",
+            "\\'"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        );
+}
+
+
+/* =========================================================
+   GET COMPLAINT PHOTOS
+========================================================= */
+
+function getComplaintPhotos(complaint) {
+    if (!complaint) return [];
+
+    let photos = [];
+
+    if (Array.isArray(complaint.photos)) {
+        photos = complaint.photos.filter(
+            p => typeof p === "string" && p.trim() !== ""
+        );
+    }
+
+    if (!photos.length && complaint.photo) {
+        if (Array.isArray(complaint.photo)) {
+            photos = complaint.photo.filter(
+                p => typeof p === "string" && p.trim() !== ""
+            );
+        } else if (typeof complaint.photo === "string" && complaint.photo.trim() !== "") {
+            photos = [complaint.photo.trim()];
+        }
+    }
+
+    if (!photos.length && complaint.photoUrl) {
+        if (typeof complaint.photoUrl === "string" && complaint.photoUrl.trim() !== "") {
+            photos = [complaint.photoUrl.trim()];
+        }
+    }
+
+    if (!photos.length && complaint.image) {
+        if (typeof complaint.image === "string" && complaint.image.trim() !== "") {
+            photos = [complaint.image.trim()];
+        }
+    }
+
+    return photos;
+}
+
+
+/* =========================================================
+   GET RESOLUTION PHOTOS
+========================================================= */
+
+function getResolutionPhotos(complaint) {
+    if (!complaint) return [];
+
+    let photos = [];
+
+    if (Array.isArray(complaint.resolutionPhotos)) {
+        photos = complaint.resolutionPhotos.filter(
+            p => typeof p === "string" && p.trim() !== ""
+        );
+    }
+
+    if (!photos.length && Array.isArray(complaint.resolutionProof)) {
+        photos = complaint.resolutionProof.filter(
+            p => typeof p === "string" && p.trim() !== ""
+        );
+    }
+
+    if (!photos.length && typeof complaint.resolutionPhoto === "string" && complaint.resolutionPhoto.trim() !== "") {
+        photos = [complaint.resolutionPhoto.trim()];
+    }
+
+    return photos;
+}
+
+
+/* =========================================================
+   NORMALIZE PHOTO URL
+========================================================= */
+
+function normalizePhotoUrl(photo) {
+    if (photo === null || photo === undefined) return "";
+
+    let photoUrl = String(photo).trim();
+    if (!photoUrl) return "";
+
+    if (photoUrl.startsWith("data:image/") || photoUrl.startsWith("blob:") || photoUrl.startsWith("http://") || photoUrl.startsWith("https://")) {
+        return photoUrl;
+    }
+
+    if (photoUrl.startsWith("/uploads/")) {
+        if (typeof API_BASE_URL !== "undefined") {
+            return API_BASE_URL.replace(/\/api\/?$/, "") + photoUrl;
+        }
+        return photoUrl;
+    }
+
+    return photoUrl;
+}
+
+
+/* =========================================================
+   OPEN FULL PHOTO LIGHTBOX
+========================================================= */
+
+function openFullPhoto(photoUrl) {
+    closeFullPhoto();
+
+    const viewer = document.createElement("div");
+    viewer.id = "citizenFullPhotoViewer";
+    viewer.innerHTML = `
+        <div class="citizen-full-photo-overlay" onclick="closeFullPhoto(event)">
+            <button type="button" class="citizen-full-photo-close" onclick="closeFullPhoto()" aria-label="Close">×</button>
+            <img src="${escapeAttribute(photoUrl)}" alt="Full complaint photo" onclick="event.stopPropagation()">
+        </div>
+    `;
+
+    document.body.appendChild(viewer);
+}
+
+
+/* =========================================================
+   CLOSE FULL PHOTO LIGHTBOX
+========================================================= */
+
+function closeFullPhoto(event) {
+    if (event && event.target && !event.target.classList.contains("citizen-full-photo-overlay")) {
+        return;
+    }
+    const viewer = document.getElementById("citizenFullPhotoViewer");
+    if (viewer) {
+        viewer.remove();
+    }
+}
+
+
+/* =========================================================
+   ADD CITIZEN RESOLUTION STYLES
+========================================================= */
+
+function addCitizenResolutionStyles() {
+    if (document.getElementById("citizenResolutionStyles")) return;
+
+    const style = document.createElement("style");
+    style.id = "citizenResolutionStyles";
+    style.textContent = `
+        .citizen-resolution-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 1.5px solid #86efac;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.08);
+            animation: fadeIn 0.3s ease;
+        }
+        .resolution-note-box {
+            background: #ffffff;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+        .citizen-photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px;
+            margin-top: 6px;
+        }
+        .citizen-photo-item {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 6px;
+            cursor: zoom-in;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .citizen-photo-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .citizen-photo-item.resolution-item {
+            border-color: #86efac;
+            background: #ffffff;
+        }
+        .citizen-photo-item img {
+            width: 100%;
+            height: 85px;
+            object-fit: cover;
+            border-radius: 6px;
+            display: block;
+        }
+        .citizen-photo-item span {
+            display: block;
+            margin-top: 4px;
+            font-size: 10px;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .citizen-full-photo-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            background: rgba(0, 0, 0, 0.92);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .citizen-full-photo-overlay img {
+            max-width: 95vw;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 10px;
+        }
+        .citizen-full-photo-close {
+            position: fixed;
+            top: 18px;
+            right: 22px;
+            z-index: 100001;
+            width: 42px;
+            height: 42px;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 28px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .citizen-full-photo-close:hover {
+            background: #dc3545;
+        }
+    `;
+    document.head.appendChild(style);
 }

@@ -447,65 +447,83 @@ function renderAdminComplaints(
 
                         <!-- ACTION -->
                         <td>
-
-                            <select
-                                class="form-select form-select-sm"
-                                onchange="updateStatus(
-                                    '${escapeAttribute(id)}',
-                                    this.value
-                                )"
-                            >
-
-                                <option
-                                    value="Pending"
-                                    ${
-                                        status ===
-                                        "Pending"
-                                            ? "selected"
-                                            : ""
-                                    }
+                            <div class="d-flex align-items-center gap-2">
+                                <select
+                                    class="form-select form-select-sm"
+                                    style="min-width: 110px;"
+                                    onchange="updateStatus(
+                                        '${escapeAttribute(id)}',
+                                        this.value
+                                    )"
                                 >
-                                    Pending
-                                </option>
+                                    <option
+                                        value="Pending"
+                                        ${
+                                            status ===
+                                            "Pending"
+                                                ? "selected"
+                                                : ""
+                                        }
+                                    >
+                                        Pending
+                                    </option>
 
-                                <option
-                                    value="Assigned"
-                                    ${
-                                        status ===
-                                        "Assigned"
-                                            ? "selected"
-                                            : ""
-                                    }
+                                    <option
+                                        value="Assigned"
+                                        ${
+                                            status ===
+                                            "Assigned"
+                                                ? "selected"
+                                                : ""
+                                        }
+                                    >
+                                        Assigned
+                                    </option>
+
+                                    <option
+                                        value="In Progress"
+                                        ${
+                                            status ===
+                                            "In Progress"
+                                                ? "selected"
+                                                : ""
+                                        }
+                                    >
+                                        In Progress
+                                    </option>
+
+                                    <option
+                                        value="Resolved"
+                                        ${
+                                            status ===
+                                            "Resolved"
+                                                ? "selected"
+                                                : ""
+                                        }
+                                    >
+                                        Resolved
+                                    </option>
+                                </select>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm ${
+                                        status === 'Resolved'
+                                            ? 'btn-success'
+                                            : 'btn-outline-primary'
+                                    } text-nowrap"
+                                    onclick="openComplaintResolutionModal('${escapeAttribute(
+                                        id
+                                    )}')"
+                                    title="View details & resolve complaint"
                                 >
-                                    Assigned
-                                </option>
-
-                                <option
-                                    value="In Progress"
                                     ${
-                                        status ===
-                                        "In Progress"
-                                            ? "selected"
-                                            : ""
+                                        status === 'Resolved'
+                                            ? '✓ Resolved'
+                                            : '🔍 Resolve'
                                     }
-                                >
-                                    In Progress
-                                </option>
-
-                                <option
-                                    value="Resolved"
-                                    ${
-                                        status ===
-                                        "Resolved"
-                                            ? "selected"
-                                            : ""
-                                    }
-                                >
-                                    Resolved
-                                </option>
-
-                            </select>
-
+                                </button>
+                            </div>
                         </td>
 
                     </tr>
@@ -679,6 +697,516 @@ function getComplaintPhotos(
 
 
     return photos;
+}
+
+
+/* =========================================================
+   GET RESOLUTION PHOTOS
+========================================================= */
+
+function getResolutionPhotos(complaint) {
+    if (!complaint) return [];
+
+    let photos = [];
+
+    if (Array.isArray(complaint.resolutionPhotos)) {
+        photos = complaint.resolutionPhotos.filter(
+            p => typeof p === "string" && p.trim() !== ""
+        );
+    }
+
+    if (!photos.length && Array.isArray(complaint.resolutionProof)) {
+        photos = complaint.resolutionProof.filter(
+            p => typeof p === "string" && p.trim() !== ""
+        );
+    }
+
+    if (!photos.length && typeof complaint.resolutionPhoto === "string" && complaint.resolutionPhoto.trim() !== "") {
+        photos = [complaint.resolutionPhoto.trim()];
+    }
+
+    return photos;
+}
+
+
+/* =========================================================
+   PRIORITY BADGE
+========================================================= */
+
+function getPriorityBadge(priority) {
+    switch (priority) {
+        case "Critical":
+        case "High":
+            return "text-bg-danger";
+        case "Medium":
+            return "text-bg-warning";
+        case "Low":
+            return "text-bg-success";
+        default:
+            return "text-bg-secondary";
+    }
+}
+
+
+/* =========================================================
+   OPEN COMPLAINT RESOLUTION MODAL
+========================================================= */
+
+function openComplaintResolutionModal(complaintId) {
+    removeResolutionModal();
+    removePhotoModal();
+
+    const complaint = currentAdminComplaints.find(function (c) {
+        return (
+            String(c.complaintId || "") === String(complaintId) ||
+            String(c.id || "") === String(complaintId) ||
+            String(c._id || "") === String(complaintId)
+        );
+    });
+
+    if (!complaint) {
+        alert("Complaint not found.");
+        return;
+    }
+
+    const id = complaint.complaintId || complaint.id || complaint._id || "N/A";
+    const category = complaint.category || "Other";
+    const description = complaint.description || "No description provided.";
+    const location = complaint.location || "Location unavailable";
+    const priority = complaint.priority || "Medium";
+    const status = complaint.status || "Pending";
+    const reportedBy = complaint.reportedBy || complaint.mobile || "Citizen";
+    const createdAt = complaint.createdAt || "Date unavailable";
+    const resolutionNote = complaint.resolutionNote || "";
+    const resolvedBy = complaint.resolvedBy || "";
+    const resolvedAt = complaint.resolvedAt || "";
+
+    const originalPhotos = getComplaintPhotos(complaint);
+    const resolutionPhotos = getResolutionPhotos(complaint);
+    const hasGps = hasCoordinates(complaint);
+
+    const modal = document.createElement("div");
+    modal.id = "adminResolutionModal";
+
+    modal.innerHTML = `
+        <div class="admin-photo-modal-overlay" onclick="closeResolutionModal(event)">
+            <div class="admin-photo-modal admin-resolution-modal" onclick="event.stopPropagation()">
+                
+                <!-- HEADER -->
+                <div class="admin-photo-modal-header">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <h4 class="mb-0">🏛️ Complaint Resolution & Management</h4>
+                            <span class="badge ${getStatusBadge(status)}">${escapeHTML(status)}</span>
+                        </div>
+                        <small>
+                            Complaint ID: <strong>${escapeHTML(id)}</strong>
+                        </small>
+                    </div>
+                    <button type="button" class="admin-photo-close" onclick="closeResolutionModal()" aria-label="Close">×</button>
+                </div>
+
+                <!-- BODY -->
+                <div class="admin-resolution-body">
+                    
+                    <!-- CITIZEN COMPLAINT DETAILS -->
+                    <div class="admin-resolution-section">
+                        <h5 class="section-title">📋 Citizen Complaint Details</h5>
+                        
+                        <div class="admin-details-grid">
+                            <div class="detail-box">
+                                <label>Category</label>
+                                <strong>${escapeHTML(category)}</strong>
+                            </div>
+                            <div class="detail-box">
+                                <label>Priority</label>
+                                <span class="badge ${getPriorityBadge(priority)}">${escapeHTML(priority)}</span>
+                            </div>
+                            <div class="detail-box">
+                                <label>Submitted Date</label>
+                                <span>${escapeHTML(String(createdAt))}</span>
+                            </div>
+                            <div class="detail-box">
+                                <label>Reported By</label>
+                                <span>${escapeHTML(String(reportedBy))}</span>
+                            </div>
+                            <div class="detail-box full-width">
+                                <label>Location & Coordinates</label>
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <span>📍 ${escapeHTML(String(location))} ${hasGps ? `(${complaint.latitude}, ${complaint.longitude})` : ""}</span>
+                                    ${hasGps ? `
+                                        <button type="button" class="btn btn-sm btn-outline-success" onclick="window.open('https://www.google.com/maps?q=${escapeAttribute(complaint.latitude)},${escapeAttribute(complaint.longitude)}', '_blank')">
+                                            🗺️ View on Google Maps
+                                        </button>
+                                    ` : `
+                                        <span class="text-muted small">Coordinates unavailable</span>
+                                    `}
+                                </div>
+                            </div>
+                            <div class="detail-box full-width">
+                                <label>Citizen Description</label>
+                                <p class="mb-0 text-dark">${escapeHTML(description)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CITIZEN ORIGINAL PHOTOS -->
+                    <div class="admin-resolution-section">
+                        <h5 class="section-title">📸 Original Complaint Photo(s) (${originalPhotos.length})</h5>
+                        ${originalPhotos.length === 0 ? `
+                            <p class="text-muted small mb-0">No original photo was attached by the citizen.</p>
+                        ` : `
+                            <div class="admin-photo-grid">
+                                ${originalPhotos.map((p, idx) => `
+                                    <div class="admin-photo-item">
+                                        <img src="${escapeAttribute(normalizePhotoUrl(p))}" alt="Original photo ${idx + 1}" onclick="openFullPhoto('${escapeAttribute(normalizePhotoUrl(p))}')" onerror="this.style.display='none';">
+                                        <span>Before / Original #${idx + 1}</span>
+                                    </div>
+                                `).join("")}
+                            </div>
+                        `}
+                    </div>
+
+                    <!-- RESOLUTION MANAGEMENT WORKFLOW -->
+                    <div class="admin-resolution-section resolution-action-box">
+                        <h5 class="section-title text-success">✨ Resolution Workflow & Proof</h5>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="modalResolutionStatus" class="form-label fw-bold">Status Update:</label>
+                                <select id="modalResolutionStatus" class="form-select">
+                                    <option value="Pending" ${status === "Pending" ? "selected" : ""}>Pending</option>
+                                    <option value="Assigned" ${status === "Assigned" ? "selected" : ""}>Assigned</option>
+                                    <option value="In Progress" ${status === "In Progress" ? "selected" : ""}>In Progress</option>
+                                    <option value="Resolved" ${status === "Resolved" ? "selected" : ""}>Resolved</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="modalAssignedTo" class="form-label fw-bold">Assigned Sanitation Team / Worker:</label>
+                                <input type="text" id="modalAssignedTo" class="form-control" placeholder="e.g. Ward 4 Sanitation Unit" value="${escapeAttribute(complaint.assignedTo || "")}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modalResolutionNote" class="form-label fw-bold">Resolution Note / Action Remarks:</label>
+                            <textarea id="modalResolutionNote" class="form-control" rows="3" placeholder="Describe the action taken (e.g., Garbage removed, area sanitized, and bin replaced successfully)...">${escapeHTML(resolutionNote)}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">📸 Upload After-Cleaning / Resolution Proof Photo(s):</label>
+                            <input type="file" id="modalResolutionFiles" class="form-control" multiple accept="image/*" onchange="previewResolutionFiles(this)">
+                            <small class="text-muted d-block mt-1">Upload clear photos showing the cleaned location or resolved issue.</small>
+                            <div id="modalResolutionPreviewGrid" class="admin-photo-grid mt-2" style="display:none;"></div>
+                        </div>
+
+                        ${resolutionPhotos.length > 0 ? `
+                            <div class="mt-3">
+                                <label class="form-label fw-bold text-success">✨ Existing Resolution Proof Photo(s):</label>
+                                <div class="admin-photo-grid">
+                                    ${resolutionPhotos.map((rp, idx) => `
+                                        <div class="admin-photo-item border-success">
+                                            <img src="${escapeAttribute(normalizePhotoUrl(rp))}" alt="Resolution Proof ${idx + 1}" onclick="openFullPhoto('${escapeAttribute(normalizePhotoUrl(rp))}')" onerror="this.style.display='none';">
+                                            <span class="text-success fw-bold">Resolution Proof #${idx + 1}</span>
+                                        </div>
+                                    `).join("")}
+                                </div>
+                            </div>
+                        ` : ""}
+
+                        ${status === "Resolved" && resolvedAt ? `
+                            <div class="alert alert-success mt-3 py-2 px-3 small d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span>✅ <strong>Resolved:</strong> ${escapeHTML(String(resolvedAt))}</span>
+                                <span><strong>By:</strong> ${escapeHTML(resolvedBy || "Municipality Admin")}</span>
+                            </div>
+                        ` : ""}
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER -->
+                <div class="admin-photo-modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" onclick="closeResolutionModal()">Close</button>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-primary" onclick="saveComplaintChanges('${escapeAttribute(id)}')">
+                            💾 Save Progress
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="markComplaintResolved('${escapeAttribute(id)}')">
+                            ✓ Mark as Resolved
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    addResolutionModalStyles();
+    document.body.style.overflow = "hidden";
+}
+
+
+/* =========================================================
+   PREVIEW RESOLUTION FILES
+========================================================= */
+
+function previewResolutionFiles(input) {
+    const previewGrid = document.getElementById("modalResolutionPreviewGrid");
+    if (!previewGrid) return;
+
+    previewGrid.innerHTML = "";
+    if (!input.files || input.files.length === 0) {
+        previewGrid.style.display = "none";
+        return;
+    }
+
+    previewGrid.style.display = "grid";
+    Array.from(input.files).forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const item = document.createElement("div");
+            item.className = "admin-photo-item";
+            item.innerHTML = `
+                <img src="${escapeAttribute(e.target.result)}" alt="Preview ${index + 1}" class="admin-complaint-image">
+                <span>New Photo ${index + 1} (${Math.round(file.size / 1024)} KB)</span>
+            `;
+            previewGrid.appendChild(item);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+
+/* =========================================================
+   CLOSE RESOLUTION MODAL
+========================================================= */
+
+function closeResolutionModal(event) {
+    if (event && event.target && !event.target.classList.contains("admin-photo-modal-overlay")) {
+        return;
+    }
+    removeResolutionModal();
+    document.body.style.overflow = "";
+}
+
+
+/* =========================================================
+   REMOVE RESOLUTION MODAL
+========================================================= */
+
+function removeResolutionModal() {
+    const modal = document.getElementById("adminResolutionModal");
+    if (modal) {
+        modal.remove();
+    }
+}
+
+
+/* =========================================================
+   MARK COMPLAINT AS RESOLVED
+========================================================= */
+
+async function markComplaintResolved(id) {
+    const confirmed = confirm("Are you sure this complaint has been resolved?");
+    if (!confirmed) return;
+
+    const select = document.getElementById("modalResolutionStatus");
+    if (select) {
+        select.value = "Resolved";
+    }
+
+    await submitResolution(id, "Resolved");
+}
+
+
+/* =========================================================
+   SAVE COMPLAINT CHANGES
+========================================================= */
+
+async function saveComplaintChanges(id) {
+    const select = document.getElementById("modalResolutionStatus");
+    const status = select ? select.value : "Pending";
+    await submitResolution(id, status);
+}
+
+
+/* =========================================================
+   SUBMIT RESOLUTION
+========================================================= */
+
+async function submitResolution(id, status) {
+    const noteEl = document.getElementById("modalResolutionNote");
+    const assignedEl = document.getElementById("modalAssignedTo");
+    const fileInput = document.getElementById("modalResolutionFiles");
+
+    const resolutionNote = noteEl ? noteEl.value.trim() : "";
+    const assignedTo = assignedEl ? assignedEl.value.trim() : "";
+    const files = fileInput && fileInput.files ? fileInput.files : [];
+
+    /* =====================================================
+       DEMO MODE
+    ===================================================== */
+    if (typeof DEMO_MODE !== "undefined" && DEMO_MODE) {
+        const complaints = getDemoComplaints();
+        const complaint = complaints.find(c =>
+            String(c.complaintId || "") === String(id) ||
+            String(c.id || "") === String(id) ||
+            String(c._id || "") === String(id)
+        );
+
+        if (!complaint) {
+            alert("Complaint not found.");
+            return;
+        }
+
+        let newPhotos = [];
+        if (files.length > 0) {
+            newPhotos = await Promise.all(
+                Array.from(files).map(file => {
+                    return new Promise(resolve => {
+                        const reader = new FileReader();
+                        reader.onload = e => resolve(e.target.result);
+                        reader.readAsDataURL(file);
+                    });
+                })
+            );
+        }
+
+        complaint.status = status;
+        complaint.resolutionNote = resolutionNote;
+        if (assignedTo) complaint.assignedTo = assignedTo;
+        if (newPhotos.length > 0) {
+            complaint.resolutionPhotos = (complaint.resolutionPhotos || []).concat(newPhotos);
+            complaint.resolutionProof = complaint.resolutionPhotos;
+        }
+        if (status === "Resolved") {
+            complaint.resolvedAt = complaint.resolvedAt || new Date().toISOString();
+            complaint.resolvedBy = "Municipality Admin";
+        }
+        complaint.updatedAt = new Date().toISOString();
+
+        saveDemoComplaints(complaints);
+        currentAdminComplaints = complaints;
+        removeResolutionModal();
+        document.body.style.overflow = "";
+        alert(status === "Resolved" ? "Complaint marked as Resolved successfully!" : "Complaint updated successfully!");
+        loadAdminDashboard();
+        return;
+    }
+
+    /* =====================================================
+       BACKEND MODE
+    ===================================================== */
+    try {
+        if (files.length > 0) {
+            const formData = new FormData();
+            formData.append("status", status);
+            formData.append("resolutionNote", resolutionNote);
+            formData.append("assignedTo", assignedTo);
+            formData.append("resolvedBy", "Municipality Admin");
+            if (status === "Resolved") {
+                formData.append("resolvedAt", new Date().toISOString());
+            }
+            for (let i = 0; i < files.length; i++) {
+                formData.append("resolutionPhotos", files[i]);
+            }
+
+            await apiRequest(`/admin/complaints/${encodeURIComponent(id)}/resolve`, {
+                method: "PUT",
+                body: formData
+            });
+        } else {
+            await apiRequest(`/admin/complaints/${encodeURIComponent(id)}/resolve`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    status: status,
+                    resolutionNote: resolutionNote,
+                    assignedTo: assignedTo,
+                    resolvedBy: "Municipality Admin",
+                    ...(status === "Resolved" ? { resolvedAt: new Date().toISOString() } : {})
+                })
+            });
+        }
+
+        removeResolutionModal();
+        document.body.style.overflow = "";
+        alert(status === "Resolved" ? "Complaint marked as Resolved successfully!" : "Complaint updated successfully!");
+        await loadAdminDashboard();
+    } catch (err) {
+        console.error("Resolution submit error:", err);
+        alert(err && err.message ? err.message : "Failed to update complaint resolution.");
+    }
+}
+
+
+/* =========================================================
+   ADD RESOLUTION MODAL STYLES
+========================================================= */
+
+function addResolutionModalStyles() {
+    addPhotoModalStyles();
+    if (document.getElementById("adminResolutionModalStyles")) return;
+
+    const style = document.createElement("style");
+    style.id = "adminResolutionModalStyles";
+    style.textContent = `
+        .admin-resolution-modal {
+            width: min(960px, 98%);
+        }
+        .admin-resolution-body {
+            padding: 20px 24px;
+            max-height: 72vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .admin-resolution-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 18px 20px;
+        }
+        .admin-resolution-section.resolution-action-box {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #1e293b;
+        }
+        .admin-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .detail-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 14px;
+        }
+        .detail-box.full-width {
+            grid-column: 1 / -1;
+        }
+        .detail-box label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 3px;
+            font-weight: 600;
+        }
+        .detail-box strong, .detail-box span {
+            font-size: 14px;
+            color: #0f172a;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 
@@ -1518,29 +2046,36 @@ async function updateStatus(
         const complaint =
             complaints.find(
                 function (c) {
-
                     return (
-                        String(
-                            c.id
-                        ) ===
-                        String(id)
+                        String(c.complaintId || "") === String(id) ||
+                        String(c.id || "") === String(id) ||
+                        String(c._id || "") === String(id)
                     );
                 }
             );
 
 
         if (!complaint) {
-
             alert(
                 "Complaint not found."
             );
-
             return;
         }
 
 
         complaint.status =
             status;
+
+        if (status === "Resolved") {
+            complaint.resolvedAt =
+                complaint.resolvedAt ||
+                new Date().toISOString();
+            complaint.resolvedBy =
+                "Municipality Admin";
+        }
+
+        complaint.updatedAt =
+            new Date().toISOString();
 
 
         saveDemoComplaints(
@@ -1553,7 +2088,6 @@ async function updateStatus(
 
 
         loadAdminDashboard();
-
         return;
     }
 

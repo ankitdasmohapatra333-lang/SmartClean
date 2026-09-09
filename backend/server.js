@@ -795,12 +795,23 @@ async function getComplaintsForUser(user) {
       .sort(sortNewestFirst);
   }
 
-  return Complaint.find({
-    $or: [
-      { userId: user._id },
-      { reportedBy: user.mobile }
-    ]
-  }).sort({ createdAt: -1 });
+  if (DEMO_AUTH_BYPASS && user._id === 'demo-citizen') {
+    return Complaint.find().sort({ createdAt: -1 }).limit(100);
+  }
+
+  const orConditions = [];
+  if (user && isValidObjectId(user._id)) {
+    orConditions.push({ userId: user._id });
+  }
+  if (user && user.mobile) {
+    orConditions.push({ reportedBy: user.mobile });
+  }
+
+  if (!orConditions.length) {
+    return Complaint.find().sort({ createdAt: -1 }).limit(50);
+  }
+
+  return Complaint.find({ $or: orConditions }).sort({ createdAt: -1 });
 }
 
 async function getAllComplaints(query = {}) {
@@ -828,7 +839,7 @@ async function getAllComplaints(query = {}) {
   return Complaint.find(mongoFilter).sort({ createdAt: -1 }).limit(250);
 }
 
-async function updateComplaintStatusById(id, status, assignedTo) {
+async function updateComplaintStatusById(id, status, assignedTo, extraData = {}) {
   const normalizedStatus = normalizeStatus(status);
   if (!normalizedStatus) {
     const error = new Error('Invalid status');
@@ -837,15 +848,30 @@ async function updateComplaintStatusById(id, status, assignedTo) {
     throw error;
   }
 
+  const resolutionNote = extraData.resolutionNote !== undefined ? String(extraData.resolutionNote).trim() : undefined;
+  const resolutionPhotos = Array.isArray(extraData.resolutionPhotos)
+    ? extraData.resolutionPhotos
+    : (extraData.resolutionPhotos ? [extraData.resolutionPhotos] : undefined);
+  const resolvedBy = extraData.resolvedBy || 'Admin';
+
   if (useMemoryStore()) {
-    const complaint = memoryStore.complaints.find((item) => item._id === id || item.complaintId === id);
+    const complaint = memoryStore.complaints.find((item) => String(item._id) === String(id) || String(item.complaintId) === String(id));
     if (!complaint) return null;
 
     const previousStatus = complaint.status;
     complaint.status = normalizedStatus;
     if (assignedTo !== undefined) complaint.assignedTo = assignedTo;
     complaint.updatedAt = new Date().toISOString();
-    if (normalizedStatus === 'Resolved') complaint.resolvedAt = new Date().toISOString();
+
+    if (resolutionNote !== undefined) complaint.resolutionNote = resolutionNote;
+    if (resolutionPhotos !== undefined) {
+      complaint.resolutionPhotos = resolutionPhotos;
+      complaint.resolutionProof = resolutionPhotos;
+    }
+    if (normalizedStatus === 'Resolved') {
+      complaint.resolvedAt = complaint.resolvedAt || new Date().toISOString();
+      complaint.resolvedBy = resolvedBy;
+    }
 
     const zone = findMemoryZone(complaint.zone);
     if (zone && previousStatus !== 'Resolved' && normalizedStatus === 'Resolved') {
@@ -865,9 +891,15 @@ async function updateComplaintStatusById(id, status, assignedTo) {
 
   const update = {
     status: normalizedStatus,
-    ...(assignedTo !== undefined ? { assignedTo } : {})
+    ...(assignedTo !== undefined ? { assignedTo } : {}),
+    ...(resolutionNote !== undefined ? { resolutionNote } : {}),
+    ...(resolutionPhotos !== undefined ? { resolutionPhotos, resolutionProof: resolutionPhotos } : {})
   };
-  if (normalizedStatus === 'Resolved') update.resolvedAt = new Date();
+
+  if (normalizedStatus === 'Resolved') {
+    update.resolvedAt = previous.resolvedAt || new Date();
+    update.resolvedBy = resolvedBy;
+  }
 
   const complaint = isValidObjectId(id)
     ? await Complaint.findByIdAndUpdate(id, update, { new: true, runValidators: true })
@@ -1119,9 +1151,32 @@ app.get('/api/complaints/:id', requireCitizen, async (req, res) => {
   }
 });
 
-app.put('/api/complaints/:id', requireAdmin, async (req, res) => {
+app.put('/api/complaints/:id', requireAdmin, upload.any(), async (req, res) => {
   try {
-    const complaint = await updateComplaintStatusById(req.params.id, req.body.status, req.body.assignedTo);
+    const uploadedPhotos = (req.files || []).map((file) => `/uploads/complaints/${file.filename}`);
+    let resolutionPhotos = [];
+    if (req.body.resolutionPhotos) {
+      if (Array.isArray(req.body.resolutionPhotos)) {
+        resolutionPhotos.push(...req.body.resolutionPhotos);
+      } else if (typeof req.body.resolutionPhotos === 'string') {
+        try {
+          const parsed = JSON.parse(req.body.resolutionPhotos);
+          if (Array.isArray(parsed)) resolutionPhotos.push(...parsed);
+          else resolutionPhotos.push(req.body.resolutionPhotos);
+        } catch {
+          resolutionPhotos.push(req.body.resolutionPhotos);
+        }
+      }
+    }
+    resolutionPhotos.push(...uploadedPhotos);
+
+    const extraData = {
+      resolutionNote: req.body.resolutionNote,
+      resolutionPhotos: resolutionPhotos.length ? resolutionPhotos : undefined,
+      resolvedBy: req.user?.email || req.body.resolvedBy || 'Admin'
+    };
+
+    const complaint = await updateComplaintStatusById(req.params.id, req.body.status, req.body.assignedTo, extraData);
     if (!complaint) return jsonError(res, 404, 'Complaint not found');
 
     return jsonSuccess(res, {
@@ -1161,9 +1216,32 @@ app.get('/api/admin/dashboard', requireAdmin, async (req, res) => {
   }
 });
 
-app.put('/api/admin/complaints/:id/status', requireAdmin, async (req, res) => {
+app.put('/api/admin/complaints/:id/status', requireAdmin, upload.any(), async (req, res) => {
   try {
-    const complaint = await updateComplaintStatusById(req.params.id, req.body.status, req.body.assignedTo);
+    const uploadedPhotos = (req.files || []).map((file) => `/uploads/complaints/${file.filename}`);
+    let resolutionPhotos = [];
+    if (req.body.resolutionPhotos) {
+      if (Array.isArray(req.body.resolutionPhotos)) {
+        resolutionPhotos.push(...req.body.resolutionPhotos);
+      } else if (typeof req.body.resolutionPhotos === 'string') {
+        try {
+          const parsed = JSON.parse(req.body.resolutionPhotos);
+          if (Array.isArray(parsed)) resolutionPhotos.push(...parsed);
+          else resolutionPhotos.push(req.body.resolutionPhotos);
+        } catch {
+          resolutionPhotos.push(req.body.resolutionPhotos);
+        }
+      }
+    }
+    resolutionPhotos.push(...uploadedPhotos);
+
+    const extraData = {
+      resolutionNote: req.body.resolutionNote,
+      resolutionPhotos: resolutionPhotos.length ? resolutionPhotos : undefined,
+      resolvedBy: req.user?.email || req.body.resolvedBy || 'Admin'
+    };
+
+    const complaint = await updateComplaintStatusById(req.params.id, req.body.status, req.body.assignedTo, extraData);
     if (!complaint) return jsonError(res, 404, 'Complaint not found');
 
     return jsonSuccess(res, {
@@ -1175,6 +1253,44 @@ app.put('/api/admin/complaints/:id/status', requireAdmin, async (req, res) => {
     return jsonError(res, err.statusCode || 500, err.message || 'Unable to update complaint status', {
       allowedValues: err.allowedValues
     });
+  }
+});
+
+app.put('/api/admin/complaints/:id/resolve', requireAdmin, upload.any(), async (req, res) => {
+  try {
+    const uploadedPhotos = (req.files || []).map((file) => `/uploads/complaints/${file.filename}`);
+    let resolutionPhotos = [];
+    if (req.body.resolutionPhotos) {
+      if (Array.isArray(req.body.resolutionPhotos)) {
+        resolutionPhotos.push(...req.body.resolutionPhotos);
+      } else if (typeof req.body.resolutionPhotos === 'string') {
+        try {
+          const parsed = JSON.parse(req.body.resolutionPhotos);
+          if (Array.isArray(parsed)) resolutionPhotos.push(...parsed);
+          else resolutionPhotos.push(req.body.resolutionPhotos);
+        } catch {
+          resolutionPhotos.push(req.body.resolutionPhotos);
+        }
+      }
+    }
+    resolutionPhotos.push(...uploadedPhotos);
+
+    const extraData = {
+      resolutionNote: req.body.resolutionNote || req.body.note || 'Issue resolved successfully.',
+      resolutionPhotos: resolutionPhotos.length ? resolutionPhotos : undefined,
+      resolvedBy: req.user?.email || req.body.resolvedBy || 'Admin'
+    };
+
+    const complaint = await updateComplaintStatusById(req.params.id, 'Resolved', req.body.assignedTo, extraData);
+    if (!complaint) return jsonError(res, 404, 'Complaint not found');
+
+    return jsonSuccess(res, {
+      message: 'Complaint marked as resolved successfully',
+      complaint: publicComplaint(complaint)
+    });
+  } catch (err) {
+    console.error('Admin resolve error:', err);
+    return jsonError(res, err.statusCode || 500, err.message || 'Unable to resolve complaint');
   }
 });
 
