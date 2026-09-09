@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Citizen Dashboard | SMARTCLEAN</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+/* =========================================================
+   SMARTCLEAN LANGUAGE SWITCHER
+   ========================================================= */
+
+.language-switcher {
+    position: relative;
+}
+
+.language-select {
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.12);
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.25s ease;
+}
+
+.language-select:hover {
+    background: rgba(255,255,255,0.20);
+    border-color: rgba(255,255,255,0.60);
+}
+
+.language-select:focus {
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.12);
+}
+
+.language-select option {
+    background: #ffffff;
+    color: #1f2937;
+}
+
+
+/* =========================================================
+   MOBILE RESPONSIVE LANGUAGE AREA
+   ========================================================= */
+
+@media (max-width: 576px) {
+
+    .smart-navbar .container-fluid {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    .smart-navbar .navbar-brand {
+        font-size: 17px;
+    }
+
+    .smart-navbar .d-flex {
+        gap: 7px !important;
+    }
+
+    .language-select {
+        padding: 6px 7px;
+        font-size: 12px;
+        max-width: 105px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .smart-navbar .btn {
+        padding: 6px 9px;
+        font-size: 12px;
+    }
+}
+</style>
+</head>
+
+
+<body class="dashboard-body">
+
+
+<!-- =========================================================
+     NAVBAR
+     ========================================================= -->
+
+<nav class="navbar smart-navbar">
+
+    <div class="container-fluid px-4">
+
+        <a class="navbar-brand fw-bold" href="dashboard.html">
+            ♻ SMARTCLEAN
+        </a>
+
+
+        <div class="d-flex align-items-center gap-3">
+
+
+            <!-- LANGUAGE SELECTOR -->
+
+            <div class="language-switcher">
+
+                <select
+                    id="languageSelect"
+                    class="language-select"
+                    onchange="changeDashboardLanguage(this.value)"
+                    aria-label="Select Language"
+                >
+
+                    <option value="en">
+                        English
+                    </option>
+
+                    <option value="hi">
+                        हिन्दी
+                    </option>
+
+                    <option value="or">
+                        ଓଡ଼ିଆ
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- USER NAME -->
+
+            <span
+                class="user-name"
+                id="userName"
+            >
+                Citizen
+            </span>
+
+
+            <!-- LOGOUT -->
+
+            <button
+                class="btn btn-outline-light btn-sm"
+                onclick="logout()"
+                id="logoutButton"
+            >
+                Logout
+            </button>
+
+        </div>
+
+    </div>
+
+</nav>
+
+
+
+<!-- =========================================================
+     MAIN DASHBOARD
+     ========================================================= -->
+
+<main class="container py-5">
+
+
+    <!-- =====================================================
+         WELCOME SECTION
+         ===================================================== -->
+
+    <section class="dashboard-welcome">
+
+        <div>
+
+            <div
+                class="welcome-label"
+                data-i18n="citizenPortal"
+            >
+                CITIZEN PORTAL
+            </div>
+
+
+            <h2>
+
+                <span data-i18n="welcome">
+                    Welcome
+                </span>
+
+                ,
+
+                <span
+                    id="welcomeName"
+                >
+                    Citizen
+                </span>
+
+                👋
+
+            </h2>
+
+
+            <p data-i18n="welcomeDescription">
+                Help build a cleaner community by reporting waste and sanitation issues.
+            </p>
+
+        </div>
+
+
+        <a
+            href="report.html"
+            class="btn btn-smart"
+            data-i18n="reportIssue"
+        >
+            ＋ Report Issue
+        </a>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         STATISTICS
+         ===================================================== -->
+
+    <section class="row g-4 mt-2">
+
+
+        <!-- TOTAL REPORTS -->
+
+        <div class="col-md-4">
+
+            <div class="stat-card">
+
+                <div class="stat-icon blue">
+                    📋
+                </div>
+
+
+                <div>
+
+                    <h3 id="totalComplaints">
+                        0
+                    </h3>
+
+
+                    <p data-i18n="totalReports">
+                        Total Reports
+                    </p>
+
+
+                    <span
+                        class="stat-caption"
+                        data-i18n="allSubmittedReports"
+                    >
+                        All submitted reports
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- PENDING -->
+
+        <div class="col-md-4">
+
+            <div class="stat-card">
+
+                <div class="stat-icon orange">
+                    ⏳
+                </div>
+
+
+                <div>
+
+                    <h3 id="pendingComplaints">
+                        0
+                    </h3>
+
+
+                    <p data-i18n="pending">
+                        Pending
+                    </p>
+
+
+                    <span
+                        class="stat-caption"
+                        data-i18n="awaitingAction"
+                    >
+                        Awaiting action
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- RESOLVED -->
+
+        <div class="col-md-4">
+
+            <div class="stat-card">
+
+                <div class="stat-icon green">
+                    ✓
+                </div>
+
+
+                <div>
+
+                    <h3 id="resolvedComplaints">
+                        0
+                    </h3>
+
+
+                    <p data-i18n="resolved">
+                        Resolved
+                    </p>
+
+
+                    <span
+                        class="stat-caption"
+                        data-i18n="successfullyCompleted"
+                    >
+                        Successfully completed
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         RECENT REPORTS + QUICK ACTIONS
+         ===================================================== -->
+
+    <section class="row g-4 mt-3">
+
+
+        <!-- =================================================
+             RECENT REPORTS
+             ================================================= -->
+
+        <div class="col-lg-8">
+
+            <div class="dashboard-card">
+
+
+                <div class="card-header-custom">
+
+                    <div>
+
+                        <span
+                            class="section-mini-title"
+                            data-i18n="activity"
+                        >
+                            ACTIVITY
+                        </span>
+
+
+                        <h4 data-i18n="recentReports">
+                            Recent Reports
+                        </h4>
+
+                    </div>
+
+
+                    <a
+                        href="complaints.html"
+                        data-i18n="viewAll"
+                    >
+                        View All →
+                    </a>
+
+                </div>
+
+
+
+                <div id="recentComplaints">
+
+
+                    <!-- EMPTY STATE -->
+
+                    <div class="empty-state">
+
+                        <div class="empty-icon">
+                            📋
+                        </div>
+
+
+                        <h5 data-i18n="noReportsYet">
+                            No reports yet
+                        </h5>
+
+
+                        <p data-i18n="submittedComplaintsAppear">
+                            Your submitted complaints will appear here.
+                        </p>
+
+
+                        <a
+                            href="report.html"
+                            class="btn btn-smart btn-sm"
+                            data-i18n="reportFirstIssue"
+                        >
+                            Report Your First Issue
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             QUICK ACTIONS
+             ================================================= -->
+
+        <div class="col-lg-4">
+
+            <div class="dashboard-card quick-card">
+
+
+                <div class="quick-heading">
+
+                    <span
+                        class="section-mini-title"
+                        data-i18n="shortcuts"
+                    >
+                        SHORTCUTS
+                    </span>
+
+
+                    <h4 data-i18n="quickActions">
+                        Quick Actions
+                    </h4>
+
+                </div>
+
+
+
+                <!-- REPORT WASTE -->
+
+                <a
+                    href="report.html"
+                    class="quick-action"
+                >
+
+                    <span class="quick-action-icon report">
+                        📝
+                    </span>
+
+
+                    <div>
+
+                        <strong data-i18n="reportWasteIssue">
+                            Report Waste Issue
+                        </strong>
+
+
+                        <small data-i18n="submitNewComplaint">
+                            Submit a new complaint
+                        </small>
+
+                    </div>
+
+
+                    <span class="quick-arrow">
+                        →
+                    </span>
+
+                </a>
+
+
+
+                <!-- TRACK REPORTS -->
+
+                <a
+                    href="complaints.html"
+                    class="quick-action"
+                >
+
+                    <span class="quick-action-icon track">
+                        📊
+                    </span>
+
+
+                    <div>
+
+                        <strong data-i18n="trackReports">
+                            Track Reports
+                        </strong>
+
+
+                        <small data-i18n="checkComplaintStatus">
+                            Check complaint status
+                        </small>
+
+                    </div>
+
+
+                    <span class="quick-arrow">
+                        →
+                    </span>
+
+                </a>
+
+
+
+                <!-- CLEAN CITY TIP -->
+
+                <div class="tip-box">
+
+
+                    <div
+                        class="tip-title"
+                        data-i18n="cleanCityTip"
+                    >
+                        💡 Clean City Tip
+                    </div>
+
+
+                    <p data-i18n="cleanCityTipText">
+                        Proper waste segregation at source helps reduce landfill waste and improves recycling.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         INFORMATION + SERVICE STATUS
+         ===================================================== -->
+
+    <section class="dashboard-bottom mt-4">
+
+
+        <!-- INFORMATION CARD -->
+
+        <div class="dashboard-info-card">
+
+            <div class="info-icon">
+                🌿
+            </div>
+
+
+            <div>
+
+                <strong data-i18n="everyReportDifference">
+                    Every report makes a difference
+                </strong>
+
+
+                <p data-i18n="everyReportDescription">
+                    Your reports help authorities identify recurring waste hotspots and improve sanitation response.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- STATUS CARD -->
+
+        <div class="dashboard-status-card">
+
+            <span class="status-dot"></span>
+
+
+            <span data-i18n="smartcleanCitizenService">
+                SMARTCLEAN Citizen Service
+            </span>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+
+<footer class="dashboard-footer">
+
+    <p>
+
+        ♻ SMARTCLEAN
+
+        &nbsp;•&nbsp;
+
+        <span data-i18n="intelligentWasteManagement">
+            Intelligent Waste & Sanitation Management
+        </span>
+
+    </p>
+
+</footer>
+
+
+
+<!-- =========================================================
+     EXISTING JAVASCRIPT
+     ========================================================= -->
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
+
+
+
+<!-- =========================================================
+     MULTI-LANGUAGE SYSTEM
+     ========================================================= -->
+
+<script>
+
+const dashboardLanguages = {
+
+    en: {
+
+        citizenPortal: "CITIZEN PORTAL",
+
+        welcome: "Welcome",
+
+        welcomeDescription:
+            "Help build a cleaner community by reporting waste and sanitation issues.",
+
+        reportIssue:
+            "＋ Report Issue",
+
+        totalReports:
+            "Total Reports",
+
+        allSubmittedReports:
+            "All submitted reports",
+
+        pending:
+            "Pending",
+
+        awaitingAction:
+            "Awaiting action",
+
+        resolved:
+            "Resolved",
+
+        successfullyCompleted:
+            "Successfully completed",
+
+        activity:
+            "ACTIVITY",
+
+        recentReports:
+            "Recent Reports",
+
+        viewAll:
+            "View All →",
+
+        noReportsYet:
+            "No reports yet",
+
+        submittedComplaintsAppear:
+            "Your submitted complaints will appear here.",
+
+        reportFirstIssue:
+            "Report Your First Issue",
+
+        shortcuts:
+            "SHORTCUTS",
+
+        quickActions:
+            "Quick Actions",
+
+        reportWasteIssue:
+            "Report Waste Issue",
+
+        submitNewComplaint:
+            "Submit a new complaint",
+
+        trackReports:
+            "Track Reports",
+
+        checkComplaintStatus:
+            "Check complaint status",
+
+        cleanCityTip:
+            "💡 Clean City Tip",
+
+        cleanCityTipText:
+            "Proper waste segregation at source helps reduce landfill waste and improves recycling.",
+
+        everyReportDifference:
+            "Every report makes a difference",
+
+        everyReportDescription:
+            "Your reports help authorities identify recurring waste hotspots and improve sanitation response.",
+
+        smartcleanCitizenService:
+            "SMARTCLEAN Citizen Service",
+
+        intelligentWasteManagement:
+            "Intelligent Waste & Sanitation Management",
+
+        logout:
+            "Logout"
+
+    },
+
+
+    hi: {
+
+        citizenPortal:
+            "नागरिक पोर्टल",
+
+        welcome:
+            "स्वागत है",
+
+        welcomeDescription:
+            "कचरा और स्वच्छता संबंधी समस्याओं की रिपोर्ट करके स्वच्छ समुदाय बनाने में मदद करें।",
+
+        reportIssue:
+            "＋ समस्या रिपोर्ट करें",
+
+        totalReports:
+            "कुल रिपोर्ट",
+
+        allSubmittedReports:
+            "सभी जमा की गई रिपोर्ट",
+
+        pending:
+            "लंबित",
+
+        awaitingAction:
+            "कार्रवाई की प्रतीक्षा में",
+
+        resolved:
+            "समाधान हो गया",
+
+        successfullyCompleted:
+            "सफलतापूर्वक पूरा हुआ",
+
+        activity:
+            "गतिविधि",
+
+        recentReports:
+            "हाल की रिपोर्ट",
+
+        viewAll:
+            "सभी देखें →",
+
+        noReportsYet:
+            "अभी कोई रिपोर्ट नहीं है",
+
+        submittedComplaintsAppear:
+            "आपकी जमा की गई शिकायतें यहाँ दिखाई देंगी।",
+
+        reportFirstIssue:
+            "अपनी पहली समस्या रिपोर्ट करें",
+
+        shortcuts:
+            "शॉर्टकट",
+
+        quickActions:
+            "त्वरित कार्य",
+
+        reportWasteIssue:
+            "कचरे की समस्या रिपोर्ट करें",
+
+        submitNewComplaint:
+            "नई शिकायत जमा करें",
+
+        trackReports:
+            "रिपोर्ट ट्रैक करें",
+
+        checkComplaintStatus:
+            "शिकायत की स्थिति देखें",
+
+        cleanCityTip:
+            "💡 स्वच्छ शहर सुझाव",
+
+        cleanCityTipText:
+            "स्रोत पर कचरे का सही पृथक्करण लैंडफिल कचरे को कम करने और रीसाइक्लिंग को बेहतर बनाने में मदद करता है।",
+
+        everyReportDifference:
+            "हर रिपोर्ट महत्वपूर्ण है",
+
+        everyReportDescription:
+            "आपकी रिपोर्ट अधिकारियों को बार-बार होने वाले कचरा हॉटस्पॉट की पहचान करने और स्वच्छता प्रतिक्रिया बेहतर करने में मदद करती है।",
+
+        smartcleanCitizenService:
+            "SMARTCLEAN नागरिक सेवा",
+
+        intelligentWasteManagement:
+            "स्मार्ट कचरा एवं स्वच्छता प्रबंधन",
+
+        logout:
+            "लॉगआउट"
+
+    },
+
+
+    or: {
+
+        citizenPortal:
+            "ନାଗରିକ ପୋର୍ଟାଲ୍",
+
+        welcome:
+            "ସ୍ୱାଗତ",
+
+        welcomeDescription:
+            "ଆବର୍ଜନା ଏବଂ ପରିମଳ ସମସ୍ୟା ରିପୋର୍ଟ କରି ଏକ ସ୍ୱଚ୍ଛ ସମୁଦାୟ ଗଠନରେ ସାହାଯ୍ୟ କରନ୍ତୁ।",
+
+        reportIssue:
+            "＋ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ",
+
+        totalReports:
+            "ମୋଟ ରିପୋର୍ଟ",
+
+        allSubmittedReports:
+            "ସମସ୍ତ ଦାଖଲ ହୋଇଥିବା ରିପୋର୍ଟ",
+
+        pending:
+            "ବିଚାରାଧୀନ",
+
+        awaitingAction:
+            "କାର୍ଯ୍ୟାନୁଷ୍ଠାନ ଅପେକ୍ଷାରେ",
+
+        resolved:
+            "ସମାଧାନ ହୋଇଛି",
+
+        successfullyCompleted:
+            "ସଫଳତାର ସହ ସମାପ୍ତ",
+
+        activity:
+            "କାର୍ଯ୍ୟକଳାପ",
+
+        recentReports:
+            "ସାମ୍ପ୍ରତିକ ରିପୋର୍ଟ",
+
+        viewAll:
+            "ସମସ୍ତ ଦେଖନ୍ତୁ →",
+
+        noReportsYet:
+            "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ରିପୋର୍ଟ ନାହିଁ",
+
+        submittedComplaintsAppear:
+            "ଆପଣଙ୍କ ଦାଖଲ କରାଯାଇଥିବା ଅଭିଯୋଗ ଏଠାରେ ଦେଖାଯିବ।",
+
+        reportFirstIssue:
+            "ଆପଣଙ୍କ ପ୍ରଥମ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ",
+
+        shortcuts:
+            "ଶର୍ଟକଟ୍",
+
+        quickActions:
+            "ତ୍ୱରିତ କାର୍ଯ୍ୟ",
+
+        reportWasteIssue:
+            "ଆବର୍ଜନା ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ",
+
+        submitNewComplaint:
+            "ନୂତନ ଅଭିଯୋଗ ଦାଖଲ କରନ୍ତୁ",
+
+        trackReports:
+            "ରିପୋର୍ଟ ଟ୍ରାକ୍ କରନ୍ତୁ",
+
+        checkComplaintStatus:
+            "ଅଭିଯୋଗର ସ୍ଥିତି ଯାଞ୍ଚ କରନ୍ତୁ",
+
+        cleanCityTip:
+            "💡 ସ୍ୱଚ୍ଛ ସହର ସୁପାରିଶ",
+
+        cleanCityTipText:
+            "ଉତ୍ସସ୍ଥଳରେ ଆବର୍ଜନାକୁ ସଠିକ୍ ଭାବରେ ପୃଥକ କରିବା ଲ୍ୟାଣ୍ଡଫିଲ୍ ଆବର୍ଜନା କମାଇବା ଏବଂ ପୁନଃଚକ୍ରଣରେ ସାହାଯ୍ୟ କରେ।",
+
+        everyReportDifference:
+            "ପ୍ରତ୍ୟେକ ରିପୋର୍ଟ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ",
+
+        everyReportDescription:
+            "ଆପଣଙ୍କ ରିପୋର୍ଟ ଅଧିକାରୀମାନଙ୍କୁ ବାରମ୍ବାର ହେଉଥିବା ଆବର୍ଜନା ସ୍ଥାନ ଚିହ୍ନଟ କରିବା ଏବଂ ପରିମଳ ପ୍ରତିକ୍ରିୟାରେ ସୁଧାର କରିବାରେ ସାହାଯ୍ୟ କରେ।",
+
+        smartcleanCitizenService:
+            "SMARTCLEAN ନାଗରିକ ସେବା",
+
+        intelligentWasteManagement:
+            "ବୁଦ୍ଧିମାନ ଆବର୍ଜନା ଏବଂ ପରିମଳ ପରିଚାଳନା",
+
+        logout:
+            "ଲଗ୍ଆଉଟ୍"
+
+    }
+
+};
+
+
+
+/* =========================================================
+   CHANGE DASHBOARD LANGUAGE
+   ========================================================= */
+
+function changeDashboardLanguage(language) {
+
+    if (!dashboardLanguages[language]) {
+        language = "en";
+    }
+
+
+    const selectedLanguage =
+        dashboardLanguages[language];
+
+
+    /*
+     * Save selected language.
+     * The same value can later be used by
+     * report.html and complaints.html.
+     */
+
+    localStorage.setItem(
+        "smartcleanLanguage",
+        language
+    );
+
+
+    /*
+     * Change all translated elements.
+     */
+
+    document
+        .querySelectorAll("[data-i18n]")
+        .forEach(function(element) {
+
+            const key =
+                element.getAttribute("data-i18n");
+
+
+            if (
+                selectedLanguage[key] !== undefined
+            ) {
+
+                element.textContent =
+                    selectedLanguage[key];
+
+            }
+
+        });
+
+
+    /*
+     * Change logout button.
+     */
+
+    const logoutButton =
+        document.getElementById("logoutButton");
+
+
+    if (logoutButton) {
+
+        logoutButton.textContent =
+            selectedLanguage.logout;
+
+    }
+
+
+    /*
+     * Update HTML language attribute.
+     */
+
+    document.documentElement.lang =
+        language;
+
+
+    /*
+     * Keep selector on selected language.
+     */
+
+    const languageSelect =
+        document.getElementById("languageSelect");
+
+
+    if (languageSelect) {
+
+        languageSelect.value =
+            language;
+
+    }
+
+}
+
+
+
+/* =========================================================
+   LOAD SAVED LANGUAGE
+   ========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        const savedLanguage =
+            localStorage.getItem(
+                "smartcleanLanguage"
+            ) || "en";
+
+
+        changeDashboardLanguage(
+            savedLanguage
+        );
+
+    }
+);
+
+</script>
+
+
+</body>
+</html>

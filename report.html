@@ -1,0 +1,2838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report Issue | SMARTCLEAN</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Leaflet Map -->
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+>
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+.report-page-extra {
+    margin-top: -15px;
+}
+
+.language-switcher-report {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.language-switcher-report select {
+    min-width: 135px;
+    border: 1px solid rgba(255,255,255,.35);
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+}
+
+.language-switcher-report select option {
+    background: #fff;
+    color: #222;
+}
+
+/* =========================
+   SMART ASSISTANT
+========================= */
+
+.smart-assistant {
+    margin-bottom: 22px;
+    border-radius: 20px;
+    padding: 20px;
+    background:
+        linear-gradient(135deg, rgba(16,185,129,.12), rgba(59,130,246,.10)),
+        #fff;
+    border: 1px solid rgba(16,185,129,.18);
+    box-shadow: 0 12px 35px rgba(15,23,42,.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.smart-assistant::before {
+    content: "";
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(16,185,129,.08);
+    right: -50px;
+    top: -55px;
+}
+
+.assistant-header {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    position: relative;
+    z-index: 1;
+}
+
+.assistant-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg,#10b981,#2563eb);
+    color: #fff;
+    font-size: 23px;
+    box-shadow: 0 8px 20px rgba(16,185,129,.25);
+}
+
+.assistant-header h4 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.assistant-header p {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.assistant-close {
+    margin-left: auto;
+    border: none;
+    background: rgba(15,23,42,.06);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 17px;
+    color: #475569;
+}
+
+.assistant-body {
+    margin-top: 17px;
+    position: relative;
+    z-index: 1;
+}
+
+.assistant-message {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 13px 15px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #334155;
+    margin-bottom: 13px;
+}
+
+.assistant-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.assistant-option {
+    border: 1px solid rgba(37,99,235,.18);
+    background: #fff;
+    color: #2563eb;
+    border-radius: 999px;
+    padding: 8px 13px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.assistant-option:hover {
+    transform: translateY(-2px);
+    background: #eff6ff;
+    border-color: #2563eb;
+}
+
+.assistant-generated {
+    display: none;
+    margin-top: 13px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.assistant-actions {
+    display: none;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.assistant-actions button {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.use-description {
+    background: #10b981;
+    color: #fff;
+}
+
+.edit-description {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.assistant-trigger {
+    width: 100%;
+    margin-top: 10px;
+    border: 1px dashed rgba(16,185,129,.35);
+    background: rgba(16,185,129,.05);
+    color: #047857;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.assistant-trigger:hover {
+    background: rgba(16,185,129,.10);
+    transform: translateY(-1px);
+}
+
+/* =========================
+   PHOTO UPLOAD
+========================= */
+
+.photo-upload-box {
+    position: relative;
+    border: 2px dashed #cbd5e1;
+    border-radius: 18px;
+    background: linear-gradient(135deg,#f8fafc,#f0fdf4);
+    padding: 26px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: .25s ease;
+}
+
+.photo-upload-box:hover {
+    border-color: #10b981;
+    background: linear-gradient(135deg,#f0fdf4,#eff6ff);
+    transform: translateY(-1px);
+}
+
+.photo-upload-box input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.photo-upload-icon {
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 10px;
+    border-radius: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg,#10b981,#2563eb);
+    color: #fff;
+    font-size: 27px;
+    box-shadow: 0 10px 25px rgba(16,185,129,.2);
+}
+
+.photo-upload-box strong {
+    display: block;
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.photo-upload-box small {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.photo-limit {
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.photo-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.photo-preview-item {
+    position: relative;
+    height: 145px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+.photo-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-remove-btn {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 29px;
+    height: 29px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(15,23,42,.78);
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-number {
+    position: absolute;
+    bottom: 7px;
+    left: 7px;
+    background: rgba(15,23,42,.75);
+    color: #fff;
+    border-radius: 8px;
+    padding: 3px 7px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* =========================
+   LOCATION
+========================= */
+
+.location-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.location-choice {
+    border: 1px solid #dbe4ee;
+    background: #fff;
+    border-radius: 15px;
+    padding: 15px 12px;
+    cursor: pointer;
+    transition: .22s ease;
+    text-align: center;
+}
+
+.location-choice:hover {
+    border-color: #10b981;
+    background: #f0fdf4;
+    transform: translateY(-2px);
+}
+
+.location-choice-icon {
+    width: 42px;
+    height: 42px;
+    margin: 0 auto 8px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ecfdf5;
+    font-size: 20px;
+}
+
+.location-choice strong {
+    display: block;
+    color: #0f172a;
+    font-size: 12px;
+}
+
+.location-choice span {
+    display: block;
+    color: #64748b;
+    font-size: 10px;
+    margin-top: 3px;
+}
+
+.location-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 15px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.location-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.location-icon {
+    width: 43px;
+    height: 43px;
+    border-radius: 13px;
+    background: #ecfdf5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.location-main strong {
+    display: block;
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.location-main span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    margin-top: 3px;
+}
+
+.manual-location-box {
+    display: none;
+    margin-top: 15px;
+    padding: 16px;
+    border-radius: 15px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.manual-location-box.active {
+    display: block;
+}
+
+.manual-location-box textarea {
+    min-height: 90px;
+}
+
+.map-container {
+    display: none;
+    margin-top: 15px;
+}
+
+.map-container.active {
+    display: block;
+}
+
+#reportMap {
+    height: 320px;
+    width: 100%;
+    border-radius: 17px;
+    border: 1px solid #dbe4ee;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(15,23,42,.08);
+}
+
+.map-help {
+    margin-top: 8px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 11px;
+}
+
+.selected-location {
+    display: none;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 12px;
+}
+
+.selected-location.active {
+    display: block;
+}
+
+/* =========================
+   HELPLINE
+========================= */
+
+.helpline-card {
+    margin-top: 20px;
+    padding: 17px 18px;
+    border-radius: 17px;
+    background: linear-gradient(135deg,#eff6ff,#f0fdf4);
+    border: 1px solid rgba(37,99,235,.12);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.helpline-icon {
+    width: 45px;
+    height: 45px;
+    flex-shrink: 0;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg,#2563eb,#10b981);
+    color: #fff;
+    font-size: 20px;
+}
+
+.helpline-content {
+    flex: 1;
+}
+
+.helpline-content strong {
+    display: block;
+    font-size: 14px;
+    color: #0f172a;
+}
+
+.helpline-content span {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.helpline-button {
+    text-decoration: none;
+    background: #fff;
+    color: #2563eb;
+    border: 1px solid rgba(37,99,235,.18);
+    padding: 8px 13px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    transition: .2s ease;
+}
+
+.helpline-button:hover {
+    background: #2563eb;
+    color: #fff;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 768px) {
+
+    .smart-navbar .container {
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .smart-navbar .navbar-brand {
+        font-size: 16px;
+    }
+
+    .language-switcher-report select {
+        min-width: 110px;
+        font-size: 12px;
+        padding: 6px 9px;
+    }
+
+    .form-page-heading h1 {
+        font-size: 30px;
+    }
+
+    .form-page-heading p {
+        font-size: 14px;
+    }
+
+    .form-card {
+        padding: 18px !important;
+        border-radius: 18px;
+    }
+
+    .report-progress {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .progress-line {
+        display: none;
+    }
+
+    .progress-step {
+        width: 100%;
+    }
+
+    .location-choice-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .location-box {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px;
+    }
+
+    .location-box button {
+        width: 100%;
+    }
+
+    .photo-preview-grid {
+        grid-template-columns: repeat(2,1fr);
+    }
+
+    #reportMap {
+        height: 280px;
+    }
+
+    .helpline-card {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .helpline-button {
+        width: 100%;
+        text-align: center;
+    }
+
+    .assistant-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .assistant-option {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+
+    main.container {
+        padding-left: 13px !important;
+        padding-right: 13px !important;
+    }
+
+    .form-page-heading h1 {
+        font-size: 25px;
+    }
+
+    .form-card {
+        padding: 15px !important;
+    }
+
+    .assistant-options {
+        grid-template-columns: 1fr;
+    }
+
+    .language-switcher-report {
+        width: 100%;
+    }
+
+    .language-switcher-report select {
+        width: 100%;
+    }
+
+    .photo-preview-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .photo-preview-item {
+        height: 125px;
+    }
+}
+</style>
+</head>
+
+<body class="dashboard-body">
+
+<nav class="navbar smart-navbar">
+    <div class="container">
+
+        <a class="navbar-brand fw-bold" href="dashboard.html">
+            ♻ SMARTCLEAN
+        </a>
+
+        <div class="d-flex align-items-center gap-2">
+
+            <div class="language-switcher-report">
+                <select
+                    id="reportLanguage"
+                    onchange="changeReportLanguage(this.value)"
+                    aria-label="Select Language">
+
+                    <option value="en">🇬🇧 English</option>
+                    <option value="hi">🇮🇳 हिन्दी</option>
+                    <option value="or">ଓ Odia</option>
+
+                </select>
+            </div>
+
+            <a
+                href="dashboard.html"
+                class="btn btn-outline-light btn-sm"
+                data-i18n="dashboard">
+
+                ← Dashboard
+
+            </a>
+
+        </div>
+
+    </div>
+</nav>
+
+
+<main class="container py-5">
+
+    <div class="form-page-heading">
+
+        <div class="heading-badge" data-i18n="badge">
+            ♻ CITIZEN REPORTING
+        </div>
+
+        <h1 data-i18n="pageTitle">
+            Help us keep your area clean
+        </h1>
+
+        <p data-i18n="pageDescription">
+            Report waste and sanitation issues with accurate details so the right team can respond efficiently.
+        </p>
+
+    </div>
+
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+
+            <!-- SMART ASSISTANT -->
+
+            <div class="smart-assistant" id="smartAssistant">
+
+                <div class="assistant-header">
+
+                    <div class="assistant-icon">
+                        🤖
+                    </div>
+
+                    <div>
+                        <h4 data-i18n="assistantTitle">
+                            SMARTCLEAN Assistant
+                        </h4>
+
+                        <p data-i18n="assistantSubtitle">
+                            Need help describing the problem? I can help.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="assistant-close"
+                        onclick="closeAssistant()"
+                        aria-label="Close">
+
+                        ×
+
+                    </button>
+
+                </div>
+
+
+                <div class="assistant-body">
+
+                    <div class="assistant-message" id="assistantMessage">
+                        <span data-i18n="assistantQuestion">
+                            What type of problem are you reporting?
+                        </span>
+                    </div>
+
+
+                    <div class="assistant-options">
+
+                        <button
+                            type="button"
+                            class="assistant-option"
+                            onclick="generateComplaint('garbage')"
+                            data-i18n="optionGarbage">
+
+                            🗑 Garbage
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="assistant-option"
+                            onclick="generateComplaint('bin')"
+                            data-i18n="optionBin">
+
+                            ♻ Overflowing Bin
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="assistant-option"
+                            onclick="generateComplaint('drainage')"
+                            data-i18n="optionDrainage">
+
+                            💧 Drainage
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="assistant-option"
+                            onclick="generateComplaint('toilet')"
+                            data-i18n="optionToilet">
+
+                            🚻 Public Toilet
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="assistant-option"
+                            onclick="generateComplaint('cleaning')"
+                            data-i18n="optionCleaning">
+
+                            🧹 Street Cleaning
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="assistant-option"
+                            onclick="generateComplaint('other')"
+                            data-i18n="optionOther">
+
+                            📌 Other
+
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        class="assistant-generated"
+                        id="assistantGenerated">
+                    </div>
+
+
+                    <div
+                        class="assistant-actions"
+                        id="assistantActions">
+
+                        <button
+                            type="button"
+                            class="use-description"
+                            onclick="useGeneratedDescription()"
+                            data-i18n="useDescription">
+
+                            Use this description
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="edit-description"
+                            onclick="editGeneratedDescription()"
+                            data-i18n="editDescription">
+
+                            Edit
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <button
+                type="button"
+                class="assistant-trigger"
+                id="assistantTrigger"
+                onclick="openAssistant()"
+                data-i18n="assistantTrigger">
+
+                🤖 Need help describing your complaint?
+
+            </button>
+
+
+            <!-- FORM CARD -->
+
+            <div class="form-card">
+
+                <div class="form-card-top">
+
+                    <div class="form-card-icon">
+                        📝
+                    </div>
+
+                    <div>
+                        <h3 data-i18n="submitTitle">
+                            Submit a Complaint
+                        </h3>
+
+                        <p data-i18n="submitSubtitle">
+                            Tell us what needs attention in your area.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <!-- PROGRESS -->
+
+                <div class="report-progress">
+
+                    <div class="progress-step active">
+
+                        <span>1</span>
+
+                        <div>
+                            <strong data-i18n="progressIssue">
+                                Issue Details
+                            </strong>
+
+                            <small data-i18n="progressIssueSmall">
+                                Describe the problem
+                            </small>
+                        </div>
+
+                    </div>
+
+
+                    <div class="progress-line"></div>
+
+
+                    <div class="progress-step">
+
+                        <span>2</span>
+
+                        <div>
+                            <strong data-i18n="progressLocation">
+                                Location
+                            </strong>
+
+                            <small data-i18n="progressLocationSmall">
+                                Help us find it
+                            </small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <form id="reportForm">
+
+
+                    <!-- ISSUE INFORMATION -->
+
+                    <div class="form-section">
+
+                        <div class="section-label">
+
+                            <span class="section-number">
+                                01
+                            </span>
+
+                            <div>
+
+                                <strong data-i18n="issueInformation">
+                                    Issue Information
+                                </strong>
+
+                                <small data-i18n="issueInformationSmall">
+                                    Select the type of sanitation issue
+                                </small>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-4">
+
+                            <label class="form-label">
+
+                                <span data-i18n="categoryLabel">
+                                    Waste / Sanitation Category
+                                </span>
+
+                                <span class="required">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <select
+                                id="category"
+                                class="form-select"
+                                required>
+
+                                <option
+                                    value=""
+                                    data-i18n="selectCategory">
+
+                                    Select category
+
+                                </option>
+
+                                <option
+                                    value="Garbage Dump"
+                                    data-i18n="garbageDump">
+
+                                    Garbage Dump
+
+                                </option>
+
+                                <option
+                                    value="Overflowing Bin"
+                                    data-i18n="overflowingBin">
+
+                                    Overflowing Bin
+
+                                </option>
+
+                                <option
+                                    value="Uncollected Waste"
+                                    data-i18n="uncollectedWaste">
+
+                                    Uncollected Waste
+
+                                </option>
+
+                                <option
+                                    value="Drainage"
+                                    data-i18n="drainage">
+
+                                    Drainage / Sewage
+
+                                </option>
+
+                                <option
+                                    value="Public Toilet"
+                                    data-i18n="publicToilet">
+
+                                    Public Toilet / Sanitation
+
+                                </option>
+
+                                <option
+                                    value="Street Cleaning"
+                                    data-i18n="streetCleaning">
+
+                                    Street Cleaning
+
+                                </option>
+
+                                <option
+                                    value="Other"
+                                    data-i18n="other">
+
+                                    Other
+
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="mb-4">
+
+                            <label class="form-label">
+
+                                <span data-i18n="descriptionLabel">
+                                    Description
+                                </span>
+
+                                <span class="required">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <textarea
+                                id="description"
+                                class="form-control"
+                                rows="5"
+                                placeholder="Describe what you observed, where it is located, and how serious the issue appears to be..."
+                                data-i18n-placeholder="descriptionPlaceholder"
+                                required></textarea>
+
+
+                            <div
+                                class="field-hint"
+                                data-i18n="descriptionHint">
+
+                                Please provide enough detail to help the sanitation team understand the issue.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- PHOTO EVIDENCE -->
+
+                    <div class="form-section">
+
+                        <div class="section-label">
+
+                            <span class="section-number">
+                                02
+                            </span>
+
+                            <div>
+
+                                <strong data-i18n="photoEvidence">
+                                    Photo Evidence
+                                </strong>
+
+                                <small data-i18n="photoEvidenceSmall">
+                                    Add up to 5 photos if available
+                                </small>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-4">
+
+                            <label class="form-label">
+
+                                <span data-i18n="uploadPhoto">
+                                    Upload Photos
+                                </span>
+
+                                <span
+                                    class="optional"
+                                    data-i18n="optional">
+
+                                    (Optional)
+
+                                </span>
+
+                            </label>
+
+
+                            <div class="photo-upload-box">
+
+                                <input
+                                    type="file"
+                                    id="photo"
+                                    name="photo"
+                                    accept="image/*"
+                                    multiple>
+
+                                <div class="photo-upload-icon">
+                                    📷
+                                </div>
+
+                                <strong data-i18n="uploadEvidence">
+                                    Add evidence photos
+                                </strong>
+
+                                <small data-i18n="uploadHint">
+                                    Click to choose photos • JPG / PNG / WebP
+                                </small>
+
+                                <div
+                                    class="photo-limit"
+                                    data-i18n="photoLimit">
+
+                                    Select up to 5 photos
+
+                                </div>
+
+                            </div>
+
+
+                            <div
+                                id="imagePreview"
+                                class="photo-preview-grid">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- LOCATION -->
+
+                    <div class="form-section">
+
+                        <div class="section-label">
+
+                            <span class="section-number">
+                                03
+                            </span>
+
+                            <div>
+
+                                <strong data-i18n="issueLocation">
+                                    Issue Location
+                                </strong>
+
+                                <small data-i18n="issueLocationSmall">
+                                    Choose the location of the reported issue
+                                </small>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-4">
+
+                            <label class="form-label">
+
+                                <span data-i18n="locationLabel">
+                                    Location
+                                </span>
+
+                                <span class="required">
+                                    *
+                                </span>
+
+                            </label>
+
+
+                            <!-- LOCATION OPTIONS -->
+
+                            <div class="location-choice-grid">
+
+                                <button
+                                    type="button"
+                                    class="location-choice"
+                                    id="currentLocationOption">
+
+                                    <div class="location-choice-icon">
+                                        📍
+                                    </div>
+
+                                    <strong data-i18n="currentLocationOption">
+                                        Current GPS
+                                    </strong>
+
+                                    <span data-i18n="currentLocationSmall">
+                                        Use my current location
+                                    </span>
+
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    class="location-choice"
+                                    id="manualLocationOption">
+
+                                    <div class="location-choice-icon">
+                                        🏠
+                                    </div>
+
+                                    <strong data-i18n="manualLocationOption">
+                                        Enter Address
+                                    </strong>
+
+                                    <span data-i18n="manualLocationSmall">
+                                        Type the location manually
+                                    </span>
+
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    class="location-choice"
+                                    id="mapLocationOption">
+
+                                    <div class="location-choice-icon">
+                                        🗺️
+                                    </div>
+
+                                    <strong data-i18n="mapLocationOption">
+                                        Select on Map
+                                    </strong>
+
+                                    <span data-i18n="mapLocationSmall">
+                                        Choose the exact place
+                                    </span>
+
+                                </button>
+
+                            </div>
+
+
+                            <!-- CURRENT LOCATION -->
+
+                            <div class="location-box">
+
+                                <div class="location-main">
+
+                                    <div class="location-icon">
+                                        📍
+                                    </div>
+
+                                    <div>
+
+                                        <strong data-i18n="currentLocation">
+                                            Current Location
+                                        </strong>
+
+                                        <span
+                                            id="locationStatus"
+                                            data-i18n="locationNotCaptured">
+
+                                            Location not captured
+
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+
+                                <button
+                                    type="button"
+                                    id="getLocation"
+                                    class="btn btn-outline-success"
+                                    data-i18n="useLocation">
+
+                                    Use Current Location
+
+                                </button>
+
+                            </div>
+
+
+                            <!-- HIDDEN COORDINATES -->
+
+                            <input
+                                type="hidden"
+                                id="latitude"
+                                name="latitude">
+
+                            <input
+                                type="hidden"
+                                id="longitude"
+                                name="longitude">
+
+
+                            <!-- MANUAL ADDRESS -->
+
+                            <div
+                                class="manual-location-box"
+                                id="manualLocationBox">
+
+                                <label
+                                    class="form-label"
+                                    for="manualAddress"
+                                    data-i18n="manualAddressLabel">
+
+                                    Enter Address
+
+                                </label>
+
+                                <textarea
+                                    id="manualAddress"
+                                    class="form-control"
+                                    placeholder="Enter house number, street, landmark, area, city..."
+                                    data-i18n-placeholder="manualAddressPlaceholder"></textarea>
+
+                                <button
+                                    type="button"
+                                    id="saveManualLocation"
+                                    class="btn btn-success mt-3 w-100"
+                                    data-i18n="saveManualLocation">
+
+                                    Use This Address
+
+                                </button>
+
+                            </div>
+
+
+                            <!-- MAP -->
+
+                            <div
+                                class="map-container"
+                                id="mapContainer">
+
+                                <div id="reportMap"></div>
+
+                                <div
+                                    class="map-help"
+                                    data-i18n="mapHelp">
+
+                                    🗺️ Tap or click on the map to select the exact location of the issue.
+
+                                </div>
+
+                                <button
+                                    type="button"
+                                    id="useMapLocation"
+                                    class="btn btn-primary w-100 mt-3"
+                                    data-i18n="useMapLocation">
+
+                                    Use Selected Map Location
+
+                                </button>
+
+                            </div>
+
+
+                            <!-- SELECTED LOCATION -->
+
+                            <div
+                                class="selected-location"
+                                id="selectedLocation">
+
+                            </div>
+
+
+                            <div
+                                class="field-hint"
+                                data-i18n="locationHint">
+
+                                You can report an issue from another place by entering an address or selecting the location on the map.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- PRIVACY -->
+
+                    <div class="info-alert">
+
+                        <div class="info-alert-icon">
+                            🔒
+                        </div>
+
+                        <div>
+
+                            <strong data-i18n="privacyTitle">
+                                Privacy & Safety
+                            </strong>
+
+                            <p data-i18n="privacyText">
+                                Location and photo information will be used only for complaint processing and sanitation management.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- HELPLINE -->
+
+                    <div class="helpline-card">
+
+                        <div class="helpline-icon">
+                            ☎
+                        </div>
+
+                        <div class="helpline-content">
+
+                            <strong data-i18n="helplineTitle">
+                                Customer Helpline
+                            </strong>
+
+                            <span data-i18n="helplineText">
+                                Need urgent assistance? Contact the SMARTCLEAN support team.
+                            </span>
+
+                        </div>
+
+
+                        <a
+                            href="tel:8260860713"
+                            class="helpline-button"
+                            data-i18n="callNow">
+
+                            Call Now
+
+                        </a>
+
+                    </div>
+
+
+                    <!-- SUBMIT -->
+
+                    <button
+                        type="submit"
+                        class="btn btn-smart w-100 btn-lg submit-report-btn">
+
+                        <span data-i18n="submitComplaint">
+                            Submit Complaint
+                        </span>
+
+                        <span>
+                            →
+                        </span>
+
+                    </button>
+
+
+                    <p
+                        class="form-footer-note"
+                        data-i18n="footerNote">
+
+                        Your report will be added to the SMARTCLEAN monitoring system.
+
+                    </p>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+<footer class="dashboard-footer">
+
+    <p>
+        ♻ SMARTCLEAN &nbsp;•&nbsp;
+
+        <span data-i18n="footerTagline">
+            Report → Prioritize → Act → Resolve
+        </span>
+
+    </p>
+
+</footer>
+
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/report.js"></script>
+
+
+<script>
+
+const reportTranslations = {
+
+en: {
+
+badge: "♻ CITIZEN REPORTING",
+
+pageTitle: "Help us keep your area clean",
+
+pageDescription:
+"Report waste and sanitation issues with accurate details so the right team can respond efficiently.",
+
+dashboard: "← Dashboard",
+
+assistantTitle: "SMARTCLEAN Assistant",
+
+assistantSubtitle:
+"Need help describing the problem? I can help.",
+
+assistantQuestion:
+"What type of problem are you reporting?",
+
+assistantTrigger:
+"🤖 Need help describing your complaint?",
+
+optionGarbage: "🗑 Garbage",
+
+optionBin: "♻ Overflowing Bin",
+
+optionDrainage: "💧 Drainage",
+
+optionToilet: "🚻 Public Toilet",
+
+optionCleaning: "🧹 Street Cleaning",
+
+optionOther: "📌 Other",
+
+useDescription: "Use this description",
+
+editDescription: "Edit",
+
+submitTitle: "Submit a Complaint",
+
+submitSubtitle:
+"Tell us what needs attention in your area.",
+
+progressIssue: "Issue Details",
+
+progressIssueSmall: "Describe the problem",
+
+progressLocation: "Location",
+
+progressLocationSmall: "Help us find it",
+
+issueInformation: "Issue Information",
+
+issueInformationSmall:
+"Select the type of sanitation issue",
+
+categoryLabel:
+"Waste / Sanitation Category",
+
+selectCategory: "Select category",
+
+garbageDump: "Garbage Dump",
+
+overflowingBin: "Overflowing Bin",
+
+uncollectedWaste: "Uncollected Waste",
+
+drainage: "Drainage / Sewage",
+
+publicToilet:
+"Public Toilet / Sanitation",
+
+streetCleaning: "Street Cleaning",
+
+other: "Other",
+
+descriptionLabel: "Description",
+
+descriptionPlaceholder:
+"Describe what you observed, where it is located, and how serious the issue appears to be...",
+
+descriptionHint:
+"Please provide enough detail to help the sanitation team understand the issue.",
+
+photoEvidence: "Photo Evidence",
+
+photoEvidenceSmall:
+"Add up to 5 photos if available",
+
+uploadPhoto: "Upload Photos",
+
+optional: "(Optional)",
+
+uploadEvidence: "Add evidence photos",
+
+uploadHint:
+"Click to choose photos • JPG / PNG / WebP",
+
+photoLimit:
+"Select up to 5 photos",
+
+issueLocation: "Issue Location",
+
+issueLocationSmall:
+"Choose the location of the reported issue",
+
+locationLabel: "Location",
+
+currentLocationOption: "Current GPS",
+
+currentLocationSmall:
+"Use my current location",
+
+manualLocationOption:
+"Enter Address",
+
+manualLocationSmall:
+"Type the location manually",
+
+mapLocationOption:
+"Select on Map",
+
+mapLocationSmall:
+"Choose the exact place",
+
+currentLocation:
+"Current Location",
+
+locationNotCaptured:
+"Location not captured",
+
+useLocation:
+"Use Current Location",
+
+manualAddressLabel:
+"Enter Address",
+
+manualAddressPlaceholder:
+"Enter house number, street, landmark, area, city...",
+
+saveManualLocation:
+"Use This Address",
+
+mapHelp:
+"🗺️ Tap or click on the map to select the exact location of the issue.",
+
+useMapLocation:
+"Use Selected Map Location",
+
+locationHint:
+"You can report an issue from another place by entering an address or selecting the location on the map.",
+
+privacyTitle:
+"Privacy & Safety",
+
+privacyText:
+"Location and photo information will be used only for complaint processing and sanitation management.",
+
+helplineTitle:
+"Customer Helpline",
+
+helplineText:
+"Need urgent assistance? Contact the SMARTCLEAN support team.",
+
+callNow: "Call Now",
+
+submitComplaint:
+"Submit Complaint",
+
+footerNote:
+"Your report will be added to the SMARTCLEAN monitoring system.",
+
+footerTagline:
+"Report → Prioritize → Act → Resolve"
+
+},
+
+hi: {
+
+badge: "♻ नागरिक रिपोर्टिंग",
+
+pageTitle:
+"अपने क्षेत्र को स्वच्छ रखने में हमारी मदद करें",
+
+pageDescription:
+"कचरा और स्वच्छता से जुड़ी समस्या की सही जानकारी दें ताकि संबंधित टीम प्रभावी तरीके से कार्रवाई कर सके।",
+
+dashboard: "← डैशबोर्ड",
+
+assistantTitle:
+"SMARTCLEAN सहायक",
+
+assistantSubtitle:
+"समस्या का विवरण लिखने में मदद चाहिए? मैं आपकी मदद कर सकता हूँ।",
+
+assistantQuestion:
+"आप किस प्रकार की समस्या की रिपोर्ट कर रहे हैं?",
+
+assistantTrigger:
+"🤖 शिकायत का विवरण लिखने में मदद चाहिए?",
+
+optionGarbage: "🗑 कचरा",
+
+optionBin: "♻ भरा हुआ डस्टबिन",
+
+optionDrainage: "💧 नाली / सीवेज",
+
+optionToilet: "🚻 सार्वजनिक शौचालय",
+
+optionCleaning: "🧹 सड़क सफाई",
+
+optionOther: "📌 अन्य",
+
+useDescription:
+"इस विवरण का उपयोग करें",
+
+editDescription:
+"संपादित करें",
+
+submitTitle:
+"शिकायत दर्ज करें",
+
+submitSubtitle:
+"अपने क्षेत्र में जिस समस्या पर ध्यान चाहिए, उसके बारे में बताएं।",
+
+progressIssue:
+"समस्या का विवरण",
+
+progressIssueSmall:
+"समस्या बताएं",
+
+progressLocation:
+"स्थान",
+
+progressLocationSmall:
+"स्थान खोजने में मदद करें",
+
+issueInformation:
+"समस्या की जानकारी",
+
+issueInformationSmall:
+"स्वच्छता समस्या का प्रकार चुनें",
+
+categoryLabel:
+"कचरा / स्वच्छता श्रेणी",
+
+selectCategory:
+"श्रेणी चुनें",
+
+garbageDump:
+"कचरा जमा",
+
+overflowingBin:
+"भरा हुआ डस्टबिन",
+
+uncollectedWaste:
+"न उठाया गया कचरा",
+
+drainage:
+"नाली / सीवेज",
+
+publicToilet:
+"सार्वजनिक शौचालय / स्वच्छता",
+
+streetCleaning:
+"सड़क सफाई",
+
+other:
+"अन्य",
+
+descriptionLabel:
+"विवरण",
+
+descriptionPlaceholder:
+"आपने क्या देखा, वह कहाँ है और समस्या कितनी गंभीर है, इसका विवरण दें...",
+
+descriptionHint:
+"कृपया पर्याप्त जानकारी दें ताकि स्वच्छता टीम समस्या को आसानी से समझ सके।",
+
+photoEvidence:
+"फोटो प्रमाण",
+
+photoEvidenceSmall:
+"यदि उपलब्ध हो तो अधिकतम 5 फोटो जोड़ें",
+
+uploadPhoto:
+"फोटो अपलोड करें",
+
+optional:
+"(वैकल्पिक)",
+
+uploadEvidence:
+"प्रमाण फोटो जोड़ें",
+
+uploadHint:
+"फोटो चुनने के लिए क्लिक करें • JPG / PNG / WebP",
+
+photoLimit:
+"अधिकतम 5 फोटो चुनें",
+
+issueLocation:
+"समस्या का स्थान",
+
+issueLocationSmall:
+"रिपोर्ट की गई समस्या का स्थान चुनें",
+
+locationLabel:
+"स्थान",
+
+currentLocationOption:
+"वर्तमान GPS",
+
+currentLocationSmall:
+"मेरे वर्तमान स्थान का उपयोग करें",
+
+manualLocationOption:
+"पता दर्ज करें",
+
+manualLocationSmall:
+"स्थान मैन्युअल रूप से लिखें",
+
+mapLocationOption:
+"मानचित्र पर चुनें",
+
+mapLocationSmall:
+"सटीक स्थान चुनें",
+
+currentLocation:
+"वर्तमान स्थान",
+
+locationNotCaptured:
+"स्थान प्राप्त नहीं हुआ",
+
+useLocation:
+"वर्तमान स्थान का उपयोग करें",
+
+manualAddressLabel:
+"पता दर्ज करें",
+
+manualAddressPlaceholder:
+"मकान नंबर, सड़क, लैंडमार्क, क्षेत्र, शहर आदि लिखें...",
+
+saveManualLocation:
+"इस पते का उपयोग करें",
+
+mapHelp:
+"🗺️ समस्या का सटीक स्थान चुनने के लिए मानचित्र पर टैप या क्लिक करें।",
+
+useMapLocation:
+"चुने गए स्थान का उपयोग करें",
+
+locationHint:
+"यदि समस्या किसी दूसरी जगह है, तो आप पता लिख सकते हैं या मानचित्र पर स्थान चुन सकते हैं।",
+
+privacyTitle:
+"गोपनीयता और सुरक्षा",
+
+privacyText:
+"स्थान और फोटो की जानकारी का उपयोग केवल शिकायत प्रक्रिया और स्वच्छता प्रबंधन के लिए किया जाएगा।",
+
+helplineTitle:
+"ग्राहक हेल्पलाइन",
+
+helplineText:
+"तुरंत सहायता चाहिए? SMARTCLEAN सहायता टीम से संपर्क करें।",
+
+callNow:
+"कॉल करें",
+
+submitComplaint:
+"शिकायत जमा करें",
+
+footerNote:
+"आपकी रिपोर्ट SMARTCLEAN मॉनिटरिंग सिस्टम में जोड़ दी जाएगी।",
+
+footerTagline:
+"रिपोर्ट → प्राथमिकता → कार्रवाई → समाधान"
+
+},
+
+or: {
+
+badge:
+"♻ ନାଗରିକ ରିପୋର୍ଟିଂ",
+
+pageTitle:
+"ଆପଣଙ୍କ ଅଞ୍ଚଳକୁ ସଫା ରଖିବାରେ ଆମକୁ ସାହାଯ୍ୟ କରନ୍ତୁ",
+
+pageDescription:
+"ଆବର୍ଜନା ଏବଂ ପରିମଳ ସମସ୍ୟାର ସଠିକ ବିବରଣୀ ଦିଅନ୍ତୁ, ଯାହାଦ୍ୱାରା ସଠିକ ଟିମ୍ ଶୀଘ୍ର ପଦକ୍ଷେପ ନେଇପାରିବ।",
+
+dashboard:
+"← ଡ୍ୟାସବୋର୍ଡ",
+
+assistantTitle:
+"SMARTCLEAN ସହାୟକ",
+
+assistantSubtitle:
+"ସମସ୍ୟାର ବିବରଣୀ ଲେଖିବାରେ ସାହାଯ୍ୟ ଦରକାର? ମୁଁ ସାହାଯ୍ୟ କରିପାରିବି।",
+
+assistantQuestion:
+"ଆପଣ କେଉଁ ପ୍ରକାରର ସମସ୍ୟା ରିପୋର୍ଟ କରୁଛନ୍ତି?",
+
+assistantTrigger:
+"🤖 ଅଭିଯୋଗର ବିବରଣୀ ଲେଖିବାରେ ସାହାଯ୍ୟ ଦରକାର?",
+
+optionGarbage:
+"🗑 ଆବର୍ଜନା",
+
+optionBin:
+"♻ ଭରିଯାଇଥିବା ଡଷ୍ଟବିନ୍",
+
+optionDrainage:
+"💧 ଡ୍ରେନେଜ୍",
+
+optionToilet:
+"🚻 ସାର୍ବଜନୀନ ଶୌଚାଳୟ",
+
+optionCleaning:
+"🧹 ରାସ୍ତା ସଫା",
+
+optionOther:
+"📌 ଅନ୍ୟାନ୍ୟ",
+
+useDescription:
+"ଏହି ବିବରଣୀ ବ୍ୟବହାର କରନ୍ତୁ",
+
+editDescription:
+"ସମ୍ପାଦନ କରନ୍ତୁ",
+
+submitTitle:
+"ଅଭିଯୋଗ ଦାଖଲ କରନ୍ତୁ",
+
+submitSubtitle:
+"ଆପଣଙ୍କ ଅଞ୍ଚଳରେ କେଉଁ ସମସ୍ୟାର ସମାଧାନ ଦରକାର ତାହା କୁହନ୍ତୁ।",
+
+progressIssue:
+"ସମସ୍ୟାର ବିବରଣୀ",
+
+progressIssueSmall:
+"ସମସ୍ୟା ବିଷୟରେ କୁହନ୍ତୁ",
+
+progressLocation:
+"ସ୍ଥାନ",
+
+progressLocationSmall:
+"ସ୍ଥାନ ଖୋଜିବାରେ ସାହାଯ୍ୟ କରନ୍ତୁ",
+
+issueInformation:
+"ସମସ୍ୟା ସୂଚନା",
+
+issueInformationSmall:
+"ପରିମଳ ସମସ୍ୟାର ପ୍ରକାର ବାଛନ୍ତୁ",
+
+categoryLabel:
+"ଆବର୍ଜନା / ପରିମଳ ବର୍ଗ",
+
+selectCategory:
+"ବର୍ଗ ବାଛନ୍ତୁ",
+
+garbageDump:
+"ଆବର୍ଜନା ଜମା",
+
+overflowingBin:
+"ଭରିଯାଇଥିବା ଡଷ୍ଟବିନ୍",
+
+uncollectedWaste:
+"ସଂଗ୍ରହ ହୋଇନଥିବା ଆବର୍ଜନା",
+
+drainage:
+"ଡ୍ରେନେଜ୍ / ସିୱେଜ୍",
+
+publicToilet:
+"ସାର୍ବଜନୀନ ଶୌଚାଳୟ / ପରିମଳ",
+
+streetCleaning:
+"ରାସ୍ତା ସଫା",
+
+other:
+"ଅନ୍ୟାନ୍ୟ",
+
+descriptionLabel:
+"ବିବରଣୀ",
+
+descriptionPlaceholder:
+"ଆପଣ କଣ ଦେଖିଲେ, ସେହି ସ୍ଥାନ କେଉଁଠି ଏବଂ ସମସ୍ୟା କେତେ ଗୁରୁତର ତାହା ଲେଖନ୍ତୁ...",
+
+descriptionHint:
+"ପରିମଳ ଟିମ୍ ସମସ୍ୟାକୁ ସହଜରେ ବୁଝିପାରିବା ପାଇଁ ପର୍ଯ୍ୟାପ୍ତ ବିବରଣୀ ଦିଅନ୍ତୁ।",
+
+photoEvidence:
+"ଫଟୋ ପ୍ରମାଣ",
+
+photoEvidenceSmall:
+"ଉପଲବ୍ଧ ଥିଲେ 5ଟି ପର୍ଯ୍ୟନ୍ତ ଫଟୋ ଯୋଡନ୍ତୁ",
+
+uploadPhoto:
+"ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ",
+
+optional:
+"(ଇଚ୍ଛାଧୀନ)",
+
+uploadEvidence:
+"ପ୍ରମାଣ ଫଟୋ ଯୋଡନ୍ତୁ",
+
+uploadHint:
+"ଫଟୋ ବାଛିବା ପାଇଁ କ୍ଲିକ୍ କରନ୍ତୁ • JPG / PNG / WebP",
+
+photoLimit:
+"5ଟି ପର୍ଯ୍ୟନ୍ତ ଫଟୋ ବାଛନ୍ତୁ",
+
+issueLocation:
+"ସମସ୍ୟାର ସ୍ଥାନ",
+
+issueLocationSmall:
+"ରିପୋର୍ଟ କରାଯାଇଥିବା ସମସ୍ୟାର ସ୍ଥାନ ବାଛନ୍ତୁ",
+
+locationLabel:
+"ସ୍ଥାନ",
+
+currentLocationOption:
+"ବର୍ତ୍ତମାନ GPS",
+
+currentLocationSmall:
+"ମୋର ବର୍ତ୍ତମାନ ସ୍ଥାନ ବ୍ୟବହାର କରନ୍ତୁ",
+
+manualLocationOption:
+"ଠିକଣା ଦିଅନ୍ତୁ",
+
+manualLocationSmall:
+"ସ୍ଥାନ ନିଜେ ଲେଖନ୍ତୁ",
+
+mapLocationOption:
+"ମାନଚିତ୍ରରେ ବାଛନ୍ତୁ",
+
+mapLocationSmall:
+"ସଠିକ ସ୍ଥାନ ବାଛନ୍ତୁ",
+
+currentLocation:
+"ବର୍ତ୍ତମାନ ସ୍ଥାନ",
+
+locationNotCaptured:
+"ସ୍ଥାନ ମିଳିନାହିଁ",
+
+useLocation:
+"ବର୍ତ୍ତମାନ ସ୍ଥାନ ବ୍ୟବହାର କରନ୍ତୁ",
+
+manualAddressLabel:
+"ଠିକଣା ଦିଅନ୍ତୁ",
+
+manualAddressPlaceholder:
+"ଘର ନମ୍ବର, ରାସ୍ତା, ଲ୍ୟାଣ୍ଡମାର୍କ, ଅଞ୍ଚଳ, ସହର ଇତ୍ୟାଦି ଲେଖନ୍ତୁ...",
+
+saveManualLocation:
+"ଏହି ଠିକଣା ବ୍ୟବହାର କରନ୍ତୁ",
+
+mapHelp:
+"🗺️ ସମସ୍ୟାର ସଠିକ ସ୍ଥାନ ବାଛିବା ପାଇଁ ମାନଚିତ୍ରରେ ଟ୍ୟାପ୍ କିମ୍ବା କ୍ଲିକ୍ କରନ୍ତୁ।",
+
+useMapLocation:
+"ଚୟନ କରାଯାଇଥିବା ସ୍ଥାନ ବ୍ୟବହାର କରନ୍ତୁ",
+
+locationHint:
+"ସମସ୍ୟା ଅନ୍ୟ ସ୍ଥାନରେ ଥିଲେ ଆପଣ ଠିକଣା ଲେଖିପାରିବେ କିମ୍ବା ମାନଚିତ୍ରରେ ସ୍ଥାନ ବାଛିପାରିବେ।",
+
+privacyTitle:
+"ଗୋପନୀୟତା ଏବଂ ସୁରକ୍ଷା",
+
+privacyText:
+"ସ୍ଥାନ ଏବଂ ଫଟୋ ସୂଚନା କେବଳ ଅଭିଯୋଗ ପ୍ରକ୍ରିୟା ଏବଂ ପରିମଳ ପରିଚାଳନା ପାଇଁ ବ୍ୟବହାର କରାଯିବ।",
+
+helplineTitle:
+"ଗ୍ରାହକ ହେଲ୍ପଲାଇନ୍",
+
+helplineText:
+"ତୁରନ୍ତ ସାହାଯ୍ୟ ଦରକାର? SMARTCLEAN ସହାୟତା ଟିମ୍ ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ।",
+
+callNow:
+"କଲ୍ କରନ୍ତୁ",
+
+submitComplaint:
+"ଅଭିଯୋଗ ଦାଖଲ କରନ୍ତୁ",
+
+footerNote:
+"ଆପଣଙ୍କ ରିପୋର୍ଟ SMARTCLEAN ମନିଟରିଂ ସିଷ୍ଟମ୍‌ରେ ଯୋଡାଯିବ।",
+
+footerTagline:
+"ରିପୋର୍ଟ → ପ୍ରାଥମିକତା → କାର୍ଯ୍ୟ → ସମାଧାନ"
+
+}
+
+};
+
+
+let currentReportLanguage =
+localStorage.getItem("smartcleanLanguage") || "en";
+
+let generatedComplaint = "";
+
+
+function changeReportLanguage(language) {
+
+    currentReportLanguage = language;
+
+    localStorage.setItem(
+        "smartcleanLanguage",
+        language
+    );
+
+    const texts =
+        reportTranslations[language] ||
+        reportTranslations.en;
+
+    document.querySelectorAll("[data-i18n]").forEach(
+        element => {
+
+            const key =
+                element.getAttribute("data-i18n");
+
+            if (texts[key]) {
+                element.textContent = texts[key];
+            }
+
+        }
+    );
+
+
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(
+        element => {
+
+            const key =
+                element.getAttribute("data-i18n-placeholder");
+
+            if (texts[key]) {
+                element.placeholder = texts[key];
+            }
+
+        }
+    );
+
+
+    const languageSelector =
+        document.getElementById("reportLanguage");
+
+    if (languageSelector) {
+        languageSelector.value = language;
+    }
+
+
+    updateAssistantLanguage();
+
+}
+
+
+function updateAssistantLanguage() {
+
+    const message =
+        document.getElementById("assistantMessage");
+
+    if (!message) return;
+
+
+    const questions = {
+
+        en:
+            "What type of problem are you reporting?",
+
+        hi:
+            "आप किस प्रकार की समस्या की रिपोर्ट कर रहे हैं?",
+
+        or:
+            "ଆପଣ କେଉଁ ପ୍ରକାରର ସମସ୍ୟା ରିପୋର୍ଟ କରୁଛନ୍ତି?"
+
+    };
+
+
+    message.textContent =
+        questions[currentReportLanguage] ||
+        questions.en;
+
+}
+
+
+function openAssistant() {
+
+    const assistant =
+        document.getElementById("smartAssistant");
+
+    const trigger =
+        document.getElementById("assistantTrigger");
+
+    if (assistant) {
+        assistant.style.display = "block";
+    }
+
+    if (trigger) {
+        trigger.style.display = "none";
+    }
+
+}
+
+
+function closeAssistant() {
+
+    const assistant =
+        document.getElementById("smartAssistant");
+
+    const trigger =
+        document.getElementById("assistantTrigger");
+
+    if (assistant) {
+        assistant.style.display = "none";
+    }
+
+    if (trigger) {
+        trigger.style.display = "block";
+    }
+
+}
+
+
+function generateComplaint(type) {
+
+    const lang = currentReportLanguage;
+
+
+    const complaints = {
+
+        en: {
+
+            garbage:
+                "Large amounts of garbage have been dumped in the reported area. The waste appears to be uncollected and may create an unhygienic environment. Please arrange cleaning and proper waste disposal.",
+
+            bin:
+                "The waste bin in this area appears to be overflowing. Waste is spreading around the bin and may cause hygiene problems. Please arrange collection and cleaning as soon as possible.",
+
+            drainage:
+                "There appears to be a drainage or sewage-related issue in this area. Water or waste may be accumulating and creating an unhygienic condition. Please inspect the location and take necessary action.",
+
+            toilet:
+                "The public toilet or sanitation facility in this area requires attention and cleaning. The current condition may create hygiene concerns for citizens. Please arrange inspection and maintenance.",
+
+            cleaning:
+                "The reported street area requires cleaning. Waste and dirt are visible and the area does not appear to have been cleaned properly. Please arrange sanitation staff to clean the location.",
+
+            other:
+                "There is a waste or sanitation-related issue in this area that requires attention. Please inspect the reported location and take appropriate action."
+
+        },
+
+        hi: {
+
+            garbage:
+                "रिपोर्ट किए गए क्षेत्र में बड़ी मात्रा में कचरा जमा है। कचरा समय पर नहीं उठाया गया है और इससे अस्वच्छ वातावरण बन सकता है। कृपया सफाई और उचित कचरा निपटान की व्यवस्था करें।",
+
+            bin:
+                "इस क्षेत्र का कचरा डस्टबिन पूरी तरह भर गया है और कचरा आसपास फैल रहा है। इससे स्वच्छता की समस्या हो सकती है। कृपया जल्द से जल्द कचरा उठाने और सफाई की व्यवस्था करें।",
+
+            drainage:
+                "इस क्षेत्र में नाली या सीवेज से जुड़ी समस्या दिखाई दे रही है। पानी या गंदगी जमा हो सकती है और अस्वच्छ स्थिति पैदा कर सकती है। कृपया स्थान का निरीक्षण करके आवश्यक कार्रवाई करें।",
+
+            toilet:
+                "इस क्षेत्र का सार्वजनिक शौचालय या स्वच्छता सुविधा सफाई और रखरखाव की आवश्यकता में है। वर्तमान स्थिति नागरिकों के लिए स्वच्छता संबंधी समस्या पैदा कर सकती है। कृपया निरीक्षण और रखरखाव की व्यवस्था करें।",
+
+            cleaning:
+                "रिपोर्ट किया गया सड़क क्षेत्र सफाई की आवश्यकता में है। वहां कचरा और गंदगी दिखाई दे रही है और क्षेत्र की ठीक से सफाई नहीं हुई है। कृपया सफाई कर्मचारियों की व्यवस्था करें।",
+
+            other:
+                "इस क्षेत्र में कचरा या स्वच्छता से संबंधित समस्या है जिस पर ध्यान देने की आवश्यकता है। कृपया रिपोर्ट किए गए स्थान का निरीक्षण करके उचित कार्रवाई करें।"
+
+        },
+
+        or: {
+
+            garbage:
+                "ରିପୋର୍ଟ କରାଯାଇଥିବା ଅଞ୍ଚଳରେ ବହୁତ ଆବର୍ଜନା ଜମା ହୋଇଛି। ଆବର୍ଜନା ନିୟମିତ ଭାବେ ସଂଗ୍ରହ ହୋଇନଥିବାରୁ ଅସ୍ୱାସ୍ଥ୍ୟକର ପରିବେଶ ସୃଷ୍ଟି ହୋଇପାରେ। ଦୟାକରି ସଫେଇ ଏବଂ ଆବର୍ଜନା ନିଷ୍କାସନର ବ୍ୟବସ୍ଥା କରନ୍ତୁ।",
+
+            bin:
+                "ଏହି ଅଞ୍ଚଳର ଡଷ୍ଟବିନ୍ ପୂର୍ଣ୍ଣ ହୋଇଯାଇଛି ଏବଂ ଆବର୍ଜନା ବାହାରକୁ ପଡୁଛି। ଏହା ସ୍ୱଚ୍ଛତା ସମସ୍ୟା ସୃଷ୍ଟି କରିପାରେ। ଦୟାକରି ଶୀଘ୍ର ଆବର୍ଜନା ସଂଗ୍ରହ ଏବଂ ସଫେଇର ବ୍ୟବସ୍ଥା କରନ୍ତୁ।",
+
+            drainage:
+                "ଏହି ଅଞ୍ଚଳରେ ଡ୍ରେନେଜ୍ କିମ୍ବା ସିୱେଜ୍ ସମ୍ବନ୍ଧୀୟ ସମସ୍ୟା ଦେଖାଯାଉଛି। ପାଣି କିମ୍ବା ଆବର୍ଜନା ଜମା ହୋଇ ଅସ୍ୱାସ୍ଥ୍ୟକର ପରିସ୍ଥିତି ସୃଷ୍ଟି କରିପାରେ। ଦୟାକରି ସ୍ଥାନଟି ଯାଞ୍ଚ କରି ଆବଶ୍ୟକ ପଦକ୍ଷେପ ନିଅନ୍ତୁ।",
+
+            toilet:
+                "ଏହି ଅଞ୍ଚଳର ସାର୍ବଜନୀନ ଶୌଚାଳୟ କିମ୍ବା ପରିମଳ ସୁବିଧା ସଫେଇ ଏବଂ ରକ୍ଷଣାବେକ୍ଷଣ ଆବଶ୍ୟକ କରୁଛି। ଦୟାକରି ଯାଞ୍ଚ ଏବଂ ରକ୍ଷଣାବେକ୍ଷଣର ବ୍ୟବସ୍ଥା କରନ୍ତୁ।",
+
+            cleaning:
+                "ରିପୋର୍ଟ କରାଯାଇଥିବା ରାସ୍ତା ଅଞ୍ଚଳ ସଫେଇ ଆବଶ୍ୟକ କରୁଛି। ସେଠାରେ ଆବର୍ଜନା ଏବଂ ମଇଳା ଦେଖାଯାଉଛି। ଦୟାକରି ସଫେଇ କର୍ମଚାରୀଙ୍କୁ ପଠାଇ ସ୍ଥାନଟି ସଫା କରନ୍ତୁ।",
+
+            other:
+                "ଏହି ଅଞ୍ଚଳରେ ଆବର୍ଜନା କିମ୍ବା ପରିମଳ ସମ୍ବନ୍ଧୀୟ ଏକ ସମସ୍ୟା ରହିଛି। ଦୟାକରି ରିପୋର୍ଟ କରାଯାଇଥିବା ସ୍ଥାନଟି ଯାଞ୍ଚ କରି ଉପଯୁକ୍ତ ପଦକ୍ଷେପ ନିଅନ୍ତୁ।"
+
+        }
+
+    };
+
+
+    generatedComplaint =
+        complaints[lang]?.[type] ||
+        complaints.en[type];
+
+
+    const generated =
+        document.getElementById("assistantGenerated");
+
+    const actions =
+        document.getElementById("assistantActions");
+
+
+    if (generated) {
+
+        generated.textContent =
+            generatedComplaint;
+
+        generated.style.display =
+            "block";
+
+    }
+
+
+    if (actions) {
+        actions.style.display =
+            "flex";
+    }
+
+}
+
+
+function useGeneratedDescription() {
+
+    const description =
+        document.getElementById("description");
+
+
+    if (!description ||
+        !generatedComplaint) {
+
+        return;
+
+    }
+
+
+    description.value =
+        generatedComplaint;
+
+    description.focus();
+
+
+    const assistant =
+        document.getElementById("smartAssistant");
+
+
+    if (assistant) {
+        assistant.style.display =
+            "none";
+    }
+
+
+    const trigger =
+        document.getElementById("assistantTrigger");
+
+
+    if (trigger) {
+        trigger.style.display =
+            "block";
+    }
+
+}
+
+
+function editGeneratedDescription() {
+
+    const description =
+        document.getElementById("description");
+
+
+    if (!description ||
+        !generatedComplaint) {
+
+        return;
+
+    }
+
+
+    description.value =
+        generatedComplaint;
+
+    description.focus();
+
+
+    description.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+
+}
+
+
+/* =========================
+   MAP UI
+========================= */
+
+let reportMap = null;
+let mapMarker = null;
+let selectedMapLat = null;
+let selectedMapLng = null;
+
+
+function initializeReportMap() {
+
+    if (reportMap) {
+        setTimeout(() => {
+            reportMap.invalidateSize();
+        }, 200);
+
+        return;
+    }
+
+
+    const defaultLocation =
+        [20.2961, 85.8245];
+
+
+    reportMap =
+        L.map("reportMap").setView(
+            defaultLocation,
+            13
+        );
+
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            maxZoom: 19,
+            attribution:
+                "&copy; OpenStreetMap contributors"
+        }
+    ).addTo(reportMap);
+
+
+    reportMap.on(
+        "click",
+        function(event) {
+
+            selectedMapLat =
+                event.latlng.lat;
+
+            selectedMapLng =
+                event.latlng.lng;
+
+
+            if (mapMarker) {
+                mapMarker.setLatLng(
+                    event.latlng
+                );
+            } else {
+
+                mapMarker =
+                    L.marker(
+                        event.latlng
+                    ).addTo(reportMap);
+
+            }
+
+
+            const selected =
+                document.getElementById(
+                    "selectedLocation"
+                );
+
+
+            if (selected) {
+
+                selected.classList.add(
+                    "active"
+                );
+
+                selected.innerHTML =
+                    `📍 <strong>Map location selected</strong><br>
+                    Latitude: ${selectedMapLat.toFixed(6)}
+                    &nbsp; | &nbsp;
+                    Longitude: ${selectedMapLng.toFixed(6)}`;
+
+            }
+
+        }
+    );
+
+}
+
+
+function showLocationMode(mode) {
+
+    const manualBox =
+        document.getElementById(
+            "manualLocationBox"
+        );
+
+    const mapBox =
+        document.getElementById(
+            "mapContainer"
+        );
+
+
+    if (manualBox) {
+        manualBox.classList.remove(
+            "active"
+        );
+    }
+
+    if (mapBox) {
+        mapBox.classList.remove(
+            "active"
+        );
+    }
+
+
+    if (mode === "manual") {
+
+        if (manualBox) {
+            manualBox.classList.add(
+                "active"
+            );
+        }
+
+    }
+
+
+    if (mode === "map") {
+
+        if (mapBox) {
+
+            mapBox.classList.add(
+                "active"
+            );
+
+            setTimeout(
+                initializeReportMap,
+                150
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   LOCATION BUTTONS
+========================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        changeReportLanguage(
+            currentReportLanguage
+        );
+
+
+        const currentOption =
+            document.getElementById(
+                "currentLocationOption"
+            );
+
+        const manualOption =
+            document.getElementById(
+                "manualLocationOption"
+            );
+
+        const mapOption =
+            document.getElementById(
+                "mapLocationOption"
+            );
+
+
+        if (currentOption) {
+
+            currentOption.addEventListener(
+                "click",
+                function() {
+
+                    const button =
+                        document.getElementById(
+                            "getLocation"
+                        );
+
+                    if (button) {
+                        button.click();
+                    }
+
+                }
+            );
+
+        }
+
+
+        if (manualOption) {
+
+            manualOption.addEventListener(
+                "click",
+                function() {
+
+                    showLocationMode(
+                        "manual"
+                    );
+
+                }
+            );
+
+        }
+
+
+        if (mapOption) {
+
+            mapOption.addEventListener(
+                "click",
+                function() {
+
+                    showLocationMode(
+                        "map"
+                    );
+
+                }
+            );
+
+        }
+
+
+        const saveManual =
+            document.getElementById(
+                "saveManualLocation"
+            );
+
+
+        if (saveManual) {
+
+            saveManual.addEventListener(
+                "click",
+                function() {
+
+                    const address =
+                        document.getElementById(
+                            "manualAddress"
+                        );
+
+
+                    if (!address ||
+                        !address.value.trim()) {
+
+                        alert(
+                            currentReportLanguage === "hi"
+                                ? "कृपया पता दर्ज करें।"
+                                : currentReportLanguage === "or"
+                                    ? "ଦୟାକରି ଠିକଣା ଦିଅନ୍ତୁ।"
+                                    : "Please enter an address."
+                        );
+
+                        return;
+
+                    }
+
+
+                    const status =
+                        document.getElementById(
+                            "locationStatus"
+                        );
+
+
+                    if (status) {
+
+                        status.textContent =
+                            address.value.trim();
+
+                    }
+
+
+                    const selected =
+                        document.getElementById(
+                            "selectedLocation"
+                        );
+
+
+                    if (selected) {
+
+                        selected.classList.add(
+                            "active"
+                        );
+
+                        selected.textContent =
+                            "🏠 " +
+                            address.value.trim();
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        const useMap =
+            document.getElementById(
+                "useMapLocation"
+            );
+
+
+        if (useMap) {
+
+            useMap.addEventListener(
+                "click",
+                function() {
+
+                    if (
+                        selectedMapLat === null ||
+                        selectedMapLng === null
+                    ) {
+
+                        alert(
+                            currentReportLanguage === "hi"
+                                ? "कृपया पहले मानचित्र पर स्थान चुनें।"
+                                : currentReportLanguage === "or"
+                                    ? "ଦୟାକରି ପ୍ରଥମେ ମାନଚିତ୍ରରେ ସ୍ଥାନ ବାଛନ୍ତୁ।"
+                                    : "Please select a location on the map first."
+                        );
+
+                        return;
+
+                    }
+
+
+                    const latitude =
+                        document.getElementById(
+                            "latitude"
+                        );
+
+                    const longitude =
+                        document.getElementById(
+                            "longitude"
+                        );
+
+                    const status =
+                        document.getElementById(
+                            "locationStatus"
+                        );
+
+
+                    if (latitude) {
+                        latitude.value =
+                            selectedMapLat;
+                    }
+
+                    if (longitude) {
+                        longitude.value =
+                            selectedMapLng;
+                    }
+
+                    if (status) {
+
+                        status.textContent =
+                            `Map: ${selectedMapLat.toFixed(6)}, ${selectedMapLng.toFixed(6)}`;
+
+                    }
+
+                }
+            );
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+</html>
