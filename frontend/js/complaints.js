@@ -383,6 +383,7 @@ function renderComplaints() {
             filteredComplaints.filter(function (complaint) {
 
                 const searchableText = [
+                    complaint.complaintId,
                     complaint.id,
                     complaint.category,
                     complaint.description,
@@ -528,6 +529,24 @@ function createComplaintCard(c) {
         c.description ||
         getTranslation("noDescription");
 
+    const rawId =
+        c.complaintId ||
+        c.id ||
+        "N/A";
+
+    const displayComplaintId =
+        String(rawId).startsWith("Complaint ID:")
+            ? rawId
+            : `Complaint ID: ${rawId}`;
+
+    let formattedDate =
+        c.createdAt || "Date unavailable";
+    if (c.createdAt && !isNaN(Date.parse(c.createdAt))) {
+        try {
+            formattedDate = new Date(c.createdAt).toLocaleString();
+        } catch (e) {}
+    }
+
     return `
         <div
             class="dashboard-card complaint-card mb-3"
@@ -545,14 +564,13 @@ function createComplaintCard(c) {
 
                     <strong>
                         ${escapeHTML(
-                            c.id || "N/A"
+                            displayComplaintId
                         )}
                     </strong>
 
                     <div class="text-muted small">
                         ${escapeHTML(
-                            c.createdAt ||
-                            "Date unavailable"
+                            formattedDate
                         )}
                     </div>
 

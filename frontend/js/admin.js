@@ -299,6 +299,7 @@ function renderAdminComplaints(
             .map(function (c) {
 
                 const id =
+                    c.complaintId ||
                     c.id ||
                     c._id ||
                     "N/A";
