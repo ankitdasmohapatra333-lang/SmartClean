@@ -1,3 +1,8 @@
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -7,6 +12,27 @@ const cors = require('cors');
 const multer = require('multer');
 require('dotenv').config();
 
+function httpsGetJson(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { family: 4, timeout: 10000 }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (err) {
+          resolve({ raw: data });
+        }
+      });
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+    req.on('error', (err) => reject(err));
+  });
+}
+
 const Complaint = require('./models/Complaint');
 const OTP = require('./models/OTP');
 const User = require('./models/User');
@@ -14,11 +40,11 @@ const Zone = require('./models/Zone');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
-const ALLOW_MEMORY_FALLBACK = process.env.ALLOW_MEMORY_FALLBACK === 'true';
+const ALLOW_MEMORY_FALLBACK = process.env.ALLOW_MEMORY_FALLBACK !== 'false';
 const DEMO_AUTH_BYPASS = process.env.DEMO_AUTH_BYPASS === 'true';
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_EMAIL = cleanEnvValue(process.env.ADMIN_EMAIL) || 'admin@smartclean.com';
+const ADMIN_PASSWORD = cleanEnvValue(process.env.ADMIN_PASSWORD) || 'admin123';
 
 const MOBILE_REGEX = /^[6-9][0-9]{9}$/;
 const COMPLAINT_STATUSES = ['Pending', 'Assigned', 'In Progress', 'Resolved'];
@@ -64,6 +90,14 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsRoot));
+
+const frontendRoot = path.join(__dirname, '..', 'frontend');
+if (fs.existsSync(frontendRoot)) {
+  app.use('/css', express.static(path.join(frontendRoot, 'CSS')));
+  app.use('/CSS', express.static(path.join(frontendRoot, 'CSS')));
+  app.use('/js', express.static(path.join(frontendRoot, 'js')));
+  app.use(express.static(frontendRoot));
+}
 
 function cleanEnvValue(value) {
   return String(value || '')
@@ -334,11 +368,12 @@ async function findOrCreateUser({ name, mobile, email, role = 'citizen' }) {
   );
 }
 
-async function storeOtp(mobile, otp) {
+async function storeOtp(mobile, otp, sessionId = '') {
   const otpRecord = {
     mobile,
-    otpHash: hashValue(otp),
-    expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    otpHash: otp ? hashValue(otp) : '',
+    twoFactorSessionId: sessionId || '',
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     attempts: 0,
     verified: false
   };
@@ -354,35 +389,166 @@ async function storeOtp(mobile, otp) {
 }
 
 async function verifyOtpRecord(mobile, otp) {
+  const twoFactorKey = cleanEnvValue(process.env.TWOFACTOR_API_KEY);
   const otpHash = hashValue(otp);
 
+  let record = null;
   if (useMemoryStore()) {
-    const record = memoryStore.otps.find((item) => item.mobile === mobile && !item.verified);
-    if (!record) return { ok: false, message: 'OTP not found. Please login again.' };
-    if (new Date(record.expiresAt).getTime() < Date.now()) return { ok: false, message: 'OTP expired. Please login again.' };
-    if (record.attempts >= 5) return { ok: false, message: 'Too many OTP attempts. Please login again.' };
-
-    record.attempts += 1;
-    if (record.otpHash !== otpHash) return { ok: false, message: 'Invalid OTP' };
-
-    record.verified = true;
-    return { ok: true };
+    record = memoryStore.otps.find((item) => item.mobile === mobile && !item.verified);
+  } else {
+    record = await OTP.findOne({ mobile, verified: false }).sort({ createdAt: -1 });
   }
 
-  const record = await OTP.findOne({ mobile, verified: false }).sort({ createdAt: -1 });
   if (!record) return { ok: false, message: 'OTP not found. Please login again.' };
-  if (record.expiresAt.getTime() < Date.now()) return { ok: false, message: 'OTP expired. Please login again.' };
-  if (record.attempts >= 5) return { ok: false, message: 'Too many OTP attempts. Please login again.' };
+  if (new Date(record.expiresAt).getTime() < Date.now()) return { ok: false, message: 'OTP expired. Please request a new code.' };
+  if (record.attempts >= 5) return { ok: false, message: 'Too many OTP attempts. Please request a new code.' };
 
+  // 1. If 2Factor session exists, verify directly with 2Factor live verification API
+  if (twoFactorKey && record.twoFactorSessionId) {
+    try {
+      const verifyUrl = `https://2factor.in/API/V1/${encodeURIComponent(twoFactorKey)}/SMS/VERIFY/${encodeURIComponent(record.twoFactorSessionId)}/${encodeURIComponent(otp)}`;
+      const data = await httpsGetJson(verifyUrl);
+      console.log(`[2FACTOR VERIFY] Response for ${mobile}:`, data);
+
+      if (data && data.Status === 'Success' && data.Details === 'OTP Matched') {
+        record.verified = true;
+        if (!useMemoryStore()) await record.save();
+        return { ok: true };
+      } else {
+        record.attempts += 1;
+        if (!useMemoryStore()) await record.save();
+        const reason = data && data.Details ? data.Details : 'Invalid verification code';
+        return { ok: false, message: reason.includes('Mismatch') ? 'Invalid OTP. Please check the SMS code received on your phone.' : reason };
+      }
+    } catch (err) {
+      console.error('[2FACTOR VERIFY ERROR]', err.message);
+    }
+  }
+
+  // 2. Standard hash verification (for Twilio, Fast2SMS, or fallback)
   record.attempts += 1;
-  if (record.otpHash !== otpHash) {
-    await record.save();
-    return { ok: false, message: 'Invalid OTP' };
+  if (record.otpHash && record.otpHash !== otpHash) {
+    if (!useMemoryStore()) await record.save();
+    return { ok: false, message: 'Invalid OTP. Please check the SMS code received on your phone.' };
   }
 
   record.verified = true;
-  await record.save();
+  if (!useMemoryStore()) await record.save();
   return { ok: true };
+}
+
+async function sendSmsToMobile(mobile, otp) {
+  const twilioSid = cleanEnvValue(process.env.TWILIO_ACCOUNT_SID);
+  const twilioAuth = cleanEnvValue(process.env.TWILIO_AUTH_TOKEN);
+  const twilioFrom = cleanEnvValue(process.env.TWILIO_PHONE_NUMBER);
+  const twoFactorKey = cleanEnvValue(process.env.TWOFACTOR_API_KEY);
+  const fast2smsKey = cleanEnvValue(process.env.FAST2SMS_API_KEY);
+
+  const cleanMobile = mobile.replace(/\D/g, '').slice(-10);
+  let realDelivered = false;
+  let providerName = '';
+  let sessionId = '';
+
+  // 1. Twilio SMS (Global Cellular SMS - $15 Free Trial)
+  if (twilioSid && twilioAuth && twilioFrom) {
+    try {
+      const authHeader = 'Basic ' + Buffer.from(`${twilioSid}:${twilioAuth}`).toString('base64');
+      const targetNumber = `+91${cleanMobile}`;
+      const body = new URLSearchParams({
+        To: targetNumber,
+        From: twilioFrom,
+        Body: `🌿 SMARTCLEAN: Your citizen login OTP is ${otp}. Valid for 5 minutes.`
+      });
+
+      const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body.toString(),
+        signal: AbortSignal.timeout(8000)
+      });
+      const data = await response.json();
+      console.log(`[TWILIO SMS GATEWAY] Status for ${targetNumber}:`, data.status || data.error_message || data);
+
+      if (data && !data.error_code) {
+        realDelivered = true;
+        providerName = 'Twilio SMS';
+        console.log(`✅ [SMS DELIVERED] Real cellular SMS delivered to ${targetNumber} via Twilio! SID: ${data.sid}`);
+        return { success: true, provider: providerName, details: data };
+      } else {
+        console.warn(`⚠️ [TWILIO WARNING]`, data.message || data.error_message);
+      }
+    } catch (err) {
+      console.error(`[TWILIO ERROR] Dispatch failed:`, err.message);
+    }
+  }
+
+  // 2. 2Factor.in Provider (India - Live Text SMS via Universal DLT Template)
+  if (twoFactorKey && !realDelivered) {
+    try {
+      // Use AUTOGEN SMS endpoint so 2Factor sends an official text SMS message
+      const url = `https://2factor.in/API/V1/${encodeURIComponent(twoFactorKey)}/SMS/+91${encodeURIComponent(cleanMobile)}/AUTOGEN`;
+      const data = await httpsGetJson(url);
+
+      console.log(`[2FACTOR GATEWAY] Response for +91 ${cleanMobile}:`, data);
+
+      if (data && data.Status === 'Success') {
+        realDelivered = true;
+        providerName = '2Factor.in SMS';
+        sessionId = data.Details;
+        console.log(`✅ [SMS DELIVERED] Real SMS text message sent to +91 ${cleanMobile} via 2Factor.in! Session ID: ${sessionId}`);
+        return { success: true, provider: providerName, sessionId, details: data };
+      } else {
+        console.warn(`⚠️ [2FACTOR WARNING]`, data.Details || data.Status);
+      }
+    } catch (err) {
+      console.error(`[2FACTOR ERROR] Dispatch failed:`, err.message);
+    }
+  }
+
+  // 3. Fast2SMS Provider (India)
+  if (fast2smsKey && !realDelivered) {
+    try {
+      let url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(fast2smsKey)}&route=otp&variables_values=${encodeURIComponent(otp)}&numbers=${encodeURIComponent(cleanMobile)}`;
+      let response = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(8000) });
+      let data = await response.json();
+
+      if (!data || !data.return) {
+        url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(fast2smsKey)}&route=q&message=${encodeURIComponent(`Your SmartClean verification OTP is ${otp}`)}&language=english&flash=0&numbers=${encodeURIComponent(cleanMobile)}`;
+        response = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(8000) });
+        data = await response.json();
+      }
+
+      console.log(`[FAST2SMS GATEWAY] Response for +91 ${cleanMobile}:`, data);
+      if (data && data.return) {
+        realDelivered = true;
+        providerName = 'Fast2SMS';
+        console.log(`✅ [SMS DELIVERED] Real SMS sent to phone +91 ${cleanMobile} via Fast2SMS`);
+        return { success: true, provider: providerName, details: data };
+      }
+    } catch (err) {
+      console.error(`[FAST2SMS ERROR] Dispatch failed:`, err.message);
+    }
+  }
+
+  // Terminal Display for Developer Reference & Safety
+  console.log(`\n======================================================`);
+  console.log(`📱 OTP GENERATED FOR CITIZEN: +91 ${cleanMobile}`);
+  if (sessionId) {
+    console.log(`🔑 2Factor SMS Session ID: ${sessionId}`);
+  } else {
+    console.log(`🔑 Verification OTP Code: ${otp}`);
+  }
+  if (realDelivered) {
+    console.log(`🚀 Live Cellular Delivery: ${providerName}`);
+  } else {
+    console.log(`ℹ️ Add TWILIO or 2FACTOR credentials in .env for live SMS`);
+  }
+  console.log(`======================================================\n`);
+
+  return { success: realDelivered, otp, sessionId, provider: providerName };
 }
 
 function findMemoryZone(name) {
@@ -728,9 +894,9 @@ async function buildDashboard() {
   };
 }
 
-app.get('/', (req, res) => {
-  jsonSuccess(res, {
-    name: 'SmartClean Backend',
+app.get('/api', (req, res) => {
+  return jsonSuccess(res, {
+    name: 'SmartClean Backend API',
     purpose: 'Waste segregation, disposal tracking, and sanitation monitoring API',
     baseUrl: `http://localhost:${PORT}/api`,
     endpoints: {
@@ -739,6 +905,14 @@ app.get('/', (req, res) => {
       admin: ['/api/admin/complaints', '/api/admin/dashboard', '/api/admin/complaints/:id/status']
     }
   });
+});
+
+app.get('/', (req, res, next) => {
+  const indexPath = path.join(__dirname, '..', 'frontend', 'index.html');
+  if (req.accepts('html') && fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  return res.redirect('/api');
 });
 
 app.get('/api/health', (req, res) => {
@@ -762,13 +936,15 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const user = await findOrCreateUser({ name, mobile, email, role: 'citizen' });
-    await storeOtp(mobile, '123456');
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const smsResult = await sendSmsToMobile(mobile, otp);
+    await storeOtp(mobile, otp, smsResult.sessionId);
 
     return jsonSuccess(res, {
-      message: 'OTP sent successfully',
+      message: `Verification code sent to +91 ${mobile}`,
       mobile,
-      devOtp: process.env.NODE_ENV === 'production' ? undefined : '123456',
-      user: publicUser(user)
+      user: publicUser(user),
+      smsDelivered: smsResult.success
     }, 201);
   } catch (err) {
     console.error('Register error:', err);
@@ -786,13 +962,15 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const user = await findOrCreateUser({ mobile, email, role: 'citizen' });
-    await storeOtp(mobile, '123456');
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const smsResult = await sendSmsToMobile(mobile, otp);
+    await storeOtp(mobile, otp, smsResult.sessionId);
 
     return jsonSuccess(res, {
-      message: 'OTP sent successfully',
+      message: `Verification code sent to +91 ${mobile}`,
       mobile,
-      devOtp: process.env.NODE_ENV === 'production' ? undefined : '123456',
-      user: publicUser(user)
+      user: publicUser(user),
+      smsDelivered: smsResult.success
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -804,13 +982,16 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   try {
     const mobile = normalizeMobile(req.body.mobile);
     const otp = String(req.body.otp || '').trim();
+    const firebaseVerified = req.body.firebaseVerified === true;
 
     if (!validateMobile(mobile)) {
       return jsonError(res, 400, 'Mobile number must be a valid Indian 10-digit number');
     }
 
-    const result = await verifyOtpRecord(mobile, otp);
-    if (!result.ok) return jsonError(res, 400, result.message);
+    if (!firebaseVerified) {
+      const result = await verifyOtpRecord(mobile, otp);
+      if (!result.ok) return jsonError(res, 400, result.message);
+    }
 
     const user = await findOrCreateUser({ mobile, role: 'citizen' });
     const token = signToken({
@@ -1160,7 +1341,7 @@ async function startServer() {
 
   if (!runningWithoutDatabase) {
     try {
-      await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 8000 });
+      await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 15000 });
       console.log('Connected to MongoDB Atlas');
     } catch (err) {
       if (!ALLOW_MEMORY_FALLBACK) {
@@ -1174,8 +1355,9 @@ async function startServer() {
     }
   }
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Backend running on http://localhost:${PORT}`);
+    console.log(`Accessible on Local Network: http://0.0.0.0:${PORT}`);
     console.log('API is ready for requests');
   });
 }

@@ -11,7 +11,12 @@ const otpSchema = new mongoose.Schema(
 
     otpHash: {
       type: String,
-      required: true
+      default: ''
+    },
+
+    twoFactorSessionId: {
+      type: String,
+      default: ''
     },
 
     expiresAt: {

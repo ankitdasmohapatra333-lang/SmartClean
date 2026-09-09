@@ -1,6 +1,10 @@
 node_modules/
+backend/node_modules/
 .env
+backend/.env
 .DS_Store
 *.log
+backend/uploads/complaints/*
+!backend/uploads/complaints/.gitkeep
 uploads/complaints/*
 !uploads/complaints/.gitkeep
