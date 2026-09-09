@@ -6,7 +6,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
-require('dotenv').config();
+const envPath = fs.existsSync(path.join(__dirname, '.env'))
+  ? path.join(__dirname, '.env')
+  : path.join(__dirname, '..', '.env');
+require('dotenv').config({ path: envPath });
 
 function httpsGetJson(url) {
   return new Promise((resolve, reject) => {

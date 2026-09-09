@@ -1,0 +1,14 @@
+{
+  "name": "smartclean",
+  "version": "1.0.0",
+  "description": "SmartClean Waste Management Platform",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "node backend/server.js",
+    "backend": "node backend/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
