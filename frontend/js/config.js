@@ -18,7 +18,6 @@
     Example: const RENDER_BACKEND_URL = "https://smartclean.onrender.com";
 */
 const RENDER_BACKEND_URL = "https://smartclean-42mc.onrender.com";
-
 const BACKEND_HOST = "http://localhost:5000";
 
 function getApiBaseUrl() {
