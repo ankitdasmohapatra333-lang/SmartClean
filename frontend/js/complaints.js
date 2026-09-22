@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
+    if (!requireCitizenSession()) return;
     setupComplaintsLanguage();
     loadComplaints();
 });

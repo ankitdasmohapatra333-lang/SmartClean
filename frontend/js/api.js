@@ -1,6 +1,6 @@
 async function apiRequest(endpoint, options = {}) {
-    const token = localStorage.getItem("smartclean_token");
-    const userStr = localStorage.getItem("smartclean_user");
+    const token = getSmartcleanToken();
+    const userStr = getSmartcleanUserJSON();
     let userMobile = "";
 
     try {
@@ -124,4 +124,58 @@ function saveDemoComplaints(data) {
             error
         );
     }
+}
+
+function getSmartcleanToken() {
+    return (
+        sessionStorage.getItem("smartclean_token") ||
+        localStorage.getItem("smartclean_token") ||
+        ""
+    );
+}
+
+function getSmartcleanUserJSON() {
+    return (
+        sessionStorage.getItem("smartclean_user") ||
+        localStorage.getItem("smartclean_user") ||
+        ""
+    );
+}
+
+function getSmartcleanUser() {
+    try {
+        const user = JSON.parse(getSmartcleanUserJSON() || "null");
+        return user && typeof user === "object" ? user : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function setCitizenSession(token, user) {
+    sessionStorage.setItem("smartclean_token", token);
+    sessionStorage.setItem("smartclean_user", JSON.stringify(user || {}));
+    localStorage.removeItem("smartclean_token");
+    localStorage.removeItem("smartclean_user");
+}
+
+function clearCitizenSession() {
+    sessionStorage.removeItem("smartclean_token");
+    sessionStorage.removeItem("smartclean_user");
+    localStorage.removeItem("smartclean_token");
+    localStorage.removeItem("smartclean_user");
+}
+
+function requireCitizenSession() {
+    const hasCurrentSession = Boolean(sessionStorage.getItem("smartclean_token"));
+
+    if (hasCurrentSession) {
+        return true;
+    }
+
+    localStorage.removeItem("smartclean_token");
+    localStorage.removeItem("smartclean_user");
+
+    const currentPage = window.location.pathname.split("/").pop() || "dashboard.html";
+    window.location.href = `login.html?next=${encodeURIComponent(currentPage)}`;
+    return false;
 }

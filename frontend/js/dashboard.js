@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
+    if (!requireCitizenSession()) return;
     loadUserData();
     loadDashboard();
 });
@@ -10,9 +11,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function loadUserData() {
     try {
-        const user = JSON.parse(
-            localStorage.getItem("smartclean_user") || "null"
-        );
+        const user = getSmartcleanUser();
 
         if (!user) return;
 

@@ -320,7 +320,7 @@ async function sendLoginOTP(
     const submitBtn = document.querySelector("#loginForm button[type='submit']");
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = "Sending OTP to Mobile ⏳";
+        submitBtn.innerHTML = "Calling with OTP...";
     }
 
     const cleanMobile = mobile.replace(/\D/g, "").slice(-10);
@@ -338,6 +338,9 @@ async function sendLoginOTP(
         );
 
         console.log("Server OTP dispatched:", response);
+        if (response.fallbackOtp) {
+            alert("OTP call could not be placed from this local server. Use the OTP printed in the backend terminal for testing.");
+        }
         window.location.href = "otp.html";
 
     } catch (error) {
@@ -346,7 +349,7 @@ async function sendLoginOTP(
 
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = "Send OTP <span>→</span>";
+            submitBtn.innerHTML = "Get OTP Call <span>→</span>";
         }
     }
 }
@@ -365,7 +368,7 @@ async function registerUser(
     const submitBtn = document.querySelector("#registerForm button[type='submit']");
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = "Sending OTP to Mobile ⏳";
+        submitBtn.innerHTML = "Calling with OTP...";
     }
 
     const cleanMobile = mobile.replace(/\D/g, "").slice(-10);
@@ -384,6 +387,9 @@ async function registerUser(
         );
 
         console.log("Server OTP dispatched:", response);
+        if (response.fallbackOtp) {
+            alert("OTP call could not be placed from this local server. Use the OTP printed in the backend terminal for testing.");
+        }
         window.location.href = "otp.html";
 
     } catch (error) {
@@ -392,7 +398,7 @@ async function registerUser(
 
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = "Continue with OTP →";
+            submitBtn.innerHTML = "Continue with OTP Call →";
         }
     }
 }
@@ -624,19 +630,13 @@ function setupOTP() {
                         "";
 
 
-                    localStorage.setItem(
-                        "smartclean_token",
-                        "demo-token"
-                    );
-
-
-                    localStorage.setItem(
-                        "smartclean_user",
-                        JSON.stringify({
+                    setCitizenSession(
+                        "demo-token",
+                        {
                             name: name,
                             mobile: pendingMobile,
                             email: email
-                        })
+                        }
                     );
 
 
@@ -680,23 +680,15 @@ function setupOTP() {
                     }
 
 
-                    localStorage.setItem(
-                        "smartclean_token",
-                        response.token
-                    );
-
-
-                    localStorage.setItem(
-                        "smartclean_user",
-                        JSON.stringify(
-                            response.user ||
-                            {
-                                mobile:
-                                    pendingMobile,
-                                name:
-                                    "Citizen"
-                            }
-                        )
+                    setCitizenSession(
+                        response.token,
+                        response.user ||
+                        {
+                            mobile:
+                                pendingMobile,
+                            name:
+                                "Citizen"
+                        }
                     );
 
 
@@ -756,10 +748,10 @@ function setupOTP() {
                 }
 
                 resendButton.disabled = true;
-                resendButton.textContent = "Sending OTP... ⏳";
+                resendButton.textContent = "Calling again...";
 
                 try {
-                    await apiRequest(
+                    const response = await apiRequest(
                         "/auth/login",
                         {
                             method: "POST",
@@ -769,7 +761,11 @@ function setupOTP() {
                         }
                     );
 
-                    alert("Verification OTP sent to +91 " + mobile);
+                    alert(
+                        response.fallbackOtp
+                            ? "OTP call could not be placed from this local server. Use the OTP printed in the backend terminal for testing."
+                            : "Verification OTP call sent to +91 " + mobile
+                    );
                 } catch (error) {
                     alert(
                         error.message ||
@@ -777,7 +773,7 @@ function setupOTP() {
                     );
                 } finally {
                     resendButton.disabled = false;
-                    resendButton.textContent = "Resend OTP";
+                    resendButton.textContent = "Call Again";
                 }
             }
         );
@@ -790,8 +786,7 @@ function setupOTP() {
 ========================= */
 
 function logout() {
-    localStorage.removeItem("smartclean_token");
-    localStorage.removeItem("smartclean_user");
+    clearCitizenSession();
     localStorage.removeItem("smartclean_pending_mobile");
     localStorage.removeItem("smartclean_pending_email");
     localStorage.removeItem("smartclean_pending_name");
@@ -808,6 +803,8 @@ function logout() {
 function adminLogout() {
     localStorage.removeItem("smartclean_admin");
     localStorage.removeItem("smartclean_token");
+    sessionStorage.removeItem("smartclean_token");
+    sessionStorage.removeItem("smartclean_user");
 
     window.location.href = "admin-login.html";
 }

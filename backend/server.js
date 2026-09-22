@@ -9,11 +9,11 @@ const multer = require('multer');
 const envPath = fs.existsSync(path.join(__dirname, '.env'))
   ? path.join(__dirname, '.env')
   : path.join(__dirname, '..', '.env');
-require('dotenv').config({ path: envPath });
+require('dotenv').config({ path: envPath, override: true });
 
 function httpsGetJson(url) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { family: 4, timeout: 10000 }, (res) => {
+    const req = https.get(url, { family: 4, timeout: 15000 }, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
@@ -36,14 +36,30 @@ const Complaint = require('./models/Complaint');
 const OTP = require('./models/OTP');
 const User = require('./models/User');
 const Zone = require('./models/Zone');
+const DroneRequest = require('./models/DroneRequest');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
-const ALLOW_MEMORY_FALLBACK = process.env.ALLOW_MEMORY_FALLBACK !== 'false';
-const DEMO_AUTH_BYPASS = process.env.DEMO_AUTH_BYPASS === 'true';
+const IS_PROD = process.env.NODE_ENV === 'production';
+const ALLOW_MEMORY_FALLBACK = IS_PROD
+  ? process.env.ALLOW_MEMORY_FALLBACK === 'true'
+  : process.env.ALLOW_MEMORY_FALLBACK !== 'false';
+const DEMO_AUTH_BYPASS = !IS_PROD && process.env.DEMO_AUTH_BYPASS === 'true';
+const ALLOW_OTP_CONSOLE_FALLBACK = IS_PROD
+  ? process.env.ALLOW_OTP_CONSOLE_FALLBACK === 'true'
+  : process.env.ALLOW_OTP_CONSOLE_FALLBACK !== 'false';
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const ADMIN_EMAIL = cleanEnvValue(process.env.ADMIN_EMAIL) || 'admin@smartclean.com';
 const ADMIN_PASSWORD = cleanEnvValue(process.env.ADMIN_PASSWORD) || 'admin123';
+
+if (IS_PROD) {
+  if (!process.env.JWT_SECRET) {
+    console.warn('[SECURITY WARNING] JWT_SECRET is not set. A random key will be generated, and sessions will expire when the server restarts.');
+  }
+  if (ADMIN_PASSWORD === 'admin123') {
+    console.warn('[SECURITY WARNING] Default ADMIN_PASSWORD is in use. Set a strong Render environment variable before deployment.');
+  }
+}
 
 const MOBILE_REGEX = /^[6-9][0-9]{9}$/;
 const COMPLAINT_STATUSES = ['Pending', 'Assigned', 'In Progress', 'Resolved'];
@@ -56,26 +72,48 @@ const memoryStore = {
   otps: [],
   complaints: [],
   zones: [],
+  droneRequests: [],
   complaintSequence: 1
 };
 
 let runningWithoutDatabase = false;
 
+const cloudinary = require('cloudinary').v2;
+
+const cloudinaryCloudName = cleanEnvValue(process.env.CLOUDINARY_CLOUD_NAME);
+const cloudinaryApiKey = cleanEnvValue(process.env.CLOUDINARY_API_KEY);
+const cloudinaryApiSecret = cleanEnvValue(process.env.CLOUDINARY_API_SECRET);
+const cloudinaryUrl = cleanEnvValue(process.env.CLOUDINARY_URL);
+
+const isCloudinaryConfigured = Boolean(
+  cloudinaryUrl || (cloudinaryCloudName && cloudinaryApiKey && cloudinaryApiSecret)
+);
+
+if (isCloudinaryConfigured) {
+  if (cloudinaryUrl) {
+    cloudinary.config();
+  } else {
+    cloudinary.config({
+      cloud_name: cloudinaryCloudName,
+      api_key: cloudinaryApiKey,
+      api_secret: cloudinaryApiSecret,
+      secure: true
+    });
+  }
+  console.log('☁️ [STORAGE] Cloudinary image storage configured');
+} else {
+  console.log('📁 [STORAGE] Cloudinary credentials not detected. Storing uploads locally in /uploads');
+}
+
 const uploadsRoot = path.join(__dirname, 'uploads');
 const complaintUploadsDir = path.join(uploadsRoot, 'complaints');
 fs.mkdirSync(complaintUploadsDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, complaintUploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `complaint-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowed.includes(file.mimetype)) {
@@ -85,7 +123,97 @@ const upload = multer({
   }
 });
 
-app.use(cors());
+function saveBufferToLocalDisk(file) {
+  if (!file) return null;
+  if (file.path) {
+    return `/uploads/complaints/${path.basename(file.path)}`;
+  }
+  if (file.buffer) {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) ? ext : '.jpg';
+    const filename = `complaint-${Date.now()}-${crypto.randomBytes(4).toString('hex')}${safeExt}`;
+    const targetPath = path.join(complaintUploadsDir, filename);
+    fs.writeFileSync(targetPath, file.buffer);
+    return `/uploads/complaints/${filename}`;
+  }
+  return null;
+}
+
+async function uploadImageFile(file, folder = 'smartclean/complaints') {
+  if (!file) return null;
+
+  if (isCloudinaryConfigured) {
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder,
+            resource_type: 'image',
+            allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+            transformation: [{ quality: 'auto', fetch_format: 'auto' }]
+          },
+          (error, res) => {
+            if (error) return reject(error);
+            resolve(res);
+          }
+        );
+
+        if (file.buffer) {
+          uploadStream.end(file.buffer);
+        } else if (file.path && fs.existsSync(file.path)) {
+          fs.createReadStream(file.path).pipe(uploadStream);
+        } else {
+          resolve(null);
+        }
+      });
+
+      if (result && result.secure_url) {
+        console.log(`☁️ [CLOUDINARY] Uploaded image to ${result.secure_url}`);
+        return result.secure_url;
+      }
+    } catch (err) {
+      console.error('⚠️ [CLOUDINARY ERROR] Upload failed, falling back to local disk:', err.message);
+    }
+  }
+
+  return saveBufferToLocalDisk(file);
+}
+
+async function extractAndUploadPhotos(req, folder = 'smartclean/complaints') {
+  const files = req.files && req.files.length ? req.files : (req.file ? [req.file] : []);
+  const urls = [];
+  for (const f of files) {
+    const url = await uploadImageFile(f, folder);
+    if (url) urls.push(url);
+  }
+  return urls;
+}
+
+const allowedFrontendOrigins = cleanEnvValue(
+  process.env.FRONTEND_ORIGIN || process.env.FRONTEND_URL || process.env.CORS_ORIGIN
+)
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+if (IS_PROD && allowedFrontendOrigins.length === 0) {
+  console.warn('[CORS WARNING] FRONTEND_ORIGIN is not set. Add your Vercel URL in Render for stricter production access.');
+}
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || !IS_PROD || allowedFrontendOrigins.length === 0) {
+      return callback(null, true);
+    }
+
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    if (allowedFrontendOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  }
+}));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsRoot));
@@ -130,6 +258,11 @@ function useMemoryStore() {
 
 function hashValue(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
+function providerErrorMessage(data) {
+  if (!data) return 'Unknown provider error';
+  return data.message || data.error_message || data.Details || data.Status || data.raw || JSON.stringify(data);
 }
 
 function base64UrlEncode(value) {
@@ -371,7 +504,7 @@ async function findOrCreateUser({ name, mobile, email, role = 'citizen' }) {
           ...(email ? { email } : {})
         }
       },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: 'after', upsert: true, runValidators: true }
     );
   } catch (err) {
     if (ALLOW_MEMORY_FALLBACK) {
@@ -427,7 +560,19 @@ async function verifyOtpRecord(mobile, otp) {
   if (new Date(record.expiresAt).getTime() < Date.now()) return { ok: false, message: 'OTP expired. Please request a new code.' };
   if (record.attempts >= 5) return { ok: false, message: 'Too many OTP attempts. Please request a new code.' };
 
-  // 1. If 2Factor session exists, verify directly with 2Factor live verification API
+  // 1. If server generated the OTP (Voice OTP, console OTP, or standard delivery), verify hash directly
+  if (record.otpHash) {
+    if (record.otpHash !== otpHash) {
+      record.attempts += 1;
+      if (!useMemoryStore()) await record.save();
+      return { ok: false, message: 'Invalid OTP. Please check the verification code received on your phone.' };
+    }
+    record.verified = true;
+    if (!useMemoryStore()) await record.save();
+    return { ok: true };
+  }
+
+  // 2. If an old 2Factor session exists from an earlier SMS build, verify it with 2Factor.
   if (twoFactorKey && record.twoFactorSessionId) {
     try {
       const verifyUrl = `https://2factor.in/API/V1/${encodeURIComponent(twoFactorKey)}/SMS/VERIFY/${encodeURIComponent(record.twoFactorSessionId)}/${encodeURIComponent(otp)}`;
@@ -442,137 +587,64 @@ async function verifyOtpRecord(mobile, otp) {
         record.attempts += 1;
         if (!useMemoryStore()) await record.save();
         const reason = data && data.Details ? data.Details : 'Invalid verification code';
-        return { ok: false, message: reason.includes('Mismatch') ? 'Invalid OTP. Please check the SMS code received on your phone.' : reason };
+        return { ok: false, message: reason.includes('Mismatch') ? 'Invalid OTP. Please check the verification code received on your phone.' : reason };
       }
     } catch (err) {
       console.error('[2FACTOR VERIFY ERROR]', err.message);
     }
   }
 
-  // 2. Standard hash verification (for Twilio, Fast2SMS, or fallback)
-  record.attempts += 1;
-  if (record.otpHash && record.otpHash !== otpHash) {
-    if (!useMemoryStore()) await record.save();
-    return { ok: false, message: 'Invalid OTP. Please check the SMS code received on your phone.' };
-  }
-
-  record.verified = true;
-  if (!useMemoryStore()) await record.save();
-  return { ok: true };
+  return { ok: false, message: 'Invalid OTP. Please check the verification code received on your phone.' };
 }
 
-async function sendSmsToMobile(mobile, otp) {
-  const twilioSid = cleanEnvValue(process.env.TWILIO_ACCOUNT_SID);
-  const twilioAuth = cleanEnvValue(process.env.TWILIO_AUTH_TOKEN);
-  const twilioFrom = cleanEnvValue(process.env.TWILIO_PHONE_NUMBER);
+async function sendOtpCallToMobile(mobile, otp) {
   const twoFactorKey = cleanEnvValue(process.env.TWOFACTOR_API_KEY);
-  const fast2smsKey = cleanEnvValue(process.env.FAST2SMS_API_KEY);
-
   const cleanMobile = mobile.replace(/\D/g, '').slice(-10);
-  let realDelivered = false;
-  let providerName = '';
-  let sessionId = '';
 
-  // 1. Twilio SMS (Global Cellular SMS - $15 Free Trial)
-  if (twilioSid && twilioAuth && twilioFrom) {
-    try {
-      const authHeader = 'Basic ' + Buffer.from(`${twilioSid}:${twilioAuth}`).toString('base64');
-      const targetNumber = `+91${cleanMobile}`;
-      const body = new URLSearchParams({
-        To: targetNumber,
-        From: twilioFrom,
-        Body: `🌿 SMARTCLEAN: Your citizen login OTP is ${otp}. Valid for 5 minutes.`
-      });
-
-      const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
-        method: 'POST',
-        headers: {
-          'Authorization': authHeader,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: body.toString(),
-        signal: AbortSignal.timeout(8000)
-      });
-      const data = await response.json();
-      console.log(`[TWILIO SMS GATEWAY] Status for ${targetNumber}:`, data.status || data.error_message || data);
-
-      if (data && !data.error_code) {
-        realDelivered = true;
-        providerName = 'Twilio SMS';
-        console.log(`✅ [SMS DELIVERED] Real cellular SMS delivered to ${targetNumber} via Twilio! SID: ${data.sid}`);
-        return { success: true, provider: providerName, details: data };
-      } else {
-        console.warn(`⚠️ [TWILIO WARNING]`, data.message || data.error_message);
-      }
-    } catch (err) {
-      console.error(`[TWILIO ERROR] Dispatch failed:`, err.message);
-    }
+  if (!twoFactorKey) {
+    console.warn('[2FACTOR ERROR] TWOFACTOR_API_KEY is not configured in .env.');
+    console.log(`\n======================================================`);
+    console.log(`📱 OTP GENERATED FOR CITIZEN: +91 ${cleanMobile}`);
+    console.log(`🔑 Verification OTP Code: ${otp}`);
+    console.log(`ℹ️ TWOFACTOR_API_KEY missing, using local testing OTP.`);
+    console.log(`======================================================\n`);
+    return { success: false, otp, provider: 'Local Terminal OTP', channel: 'call' };
   }
 
-  // 2. 2Factor.in Provider (India - Live Text SMS via Universal DLT Template)
-  if (twoFactorKey && !realDelivered) {
-    try {
-      // Use AUTOGEN SMS endpoint so 2Factor sends an official text SMS message
-      const url = `https://2factor.in/API/V1/${encodeURIComponent(twoFactorKey)}/SMS/+91${encodeURIComponent(cleanMobile)}/AUTOGEN`;
-      const data = await httpsGetJson(url);
+  // Attempt 2Factor Voice OTP Call (10-digit number without +91).
+  try {
+    const voiceUrl = `https://2factor.in/API/V1/${encodeURIComponent(twoFactorKey)}/VOICE/${encodeURIComponent(cleanMobile)}/${encodeURIComponent(otp)}`;
+    const data = await httpsGetJson(voiceUrl);
 
-      console.log(`[2FACTOR GATEWAY] Response for +91 ${cleanMobile}:`, data);
+    console.log(`[2FACTOR VOICE CALL] Response for +91 ${cleanMobile}:`, data);
 
-      if (data && data.Status === 'Success') {
-        realDelivered = true;
-        providerName = '2Factor.in SMS';
-        sessionId = data.Details;
-        console.log(`✅ [SMS DELIVERED] Real SMS text message sent to +91 ${cleanMobile} via 2Factor.in! Session ID: ${sessionId}`);
-        return { success: true, provider: providerName, sessionId, details: data };
-      } else {
-        console.warn(`⚠️ [2FACTOR WARNING]`, data.Details || data.Status);
-      }
-    } catch (err) {
-      console.error(`[2FACTOR ERROR] Dispatch failed:`, err.message);
+    if (data && data.Status === 'Success') {
+      const sessionId = data.Details;
+      console.log(`✅ [OTP VOICE CALL PLACED] Voice call placed to +91 ${cleanMobile} via 2Factor.in. Session ID: ${sessionId}`);
+      return { success: true, provider: '2Factor.in Voice Call', channel: 'call', sessionId, details: data };
     }
+
+    console.warn(`⚠️ [2FACTOR VOICE WARNING] Voice call was not accepted:`, providerErrorMessage(data));
+  } catch (err) {
+    console.error(`[2FACTOR VOICE ERROR] Voice dispatch failed:`, err.message);
   }
 
-  // 3. Fast2SMS Provider (India)
-  if (fast2smsKey && !realDelivered) {
-    try {
-      let url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(fast2smsKey)}&route=otp&variables_values=${encodeURIComponent(otp)}&numbers=${encodeURIComponent(cleanMobile)}`;
-      let response = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(8000) });
-      let data = await response.json();
-
-      if (!data || !data.return) {
-        url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(fast2smsKey)}&route=q&message=${encodeURIComponent(`Your SmartClean verification OTP is ${otp}`)}&language=english&flash=0&numbers=${encodeURIComponent(cleanMobile)}`;
-        response = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(8000) });
-        data = await response.json();
-      }
-
-      console.log(`[FAST2SMS GATEWAY] Response for +91 ${cleanMobile}:`, data);
-      if (data && data.return) {
-        realDelivered = true;
-        providerName = 'Fast2SMS';
-        console.log(`✅ [SMS DELIVERED] Real SMS sent to phone +91 ${cleanMobile} via Fast2SMS`);
-        return { success: true, provider: providerName, details: data };
-      }
-    } catch (err) {
-      console.error(`[FAST2SMS ERROR] Dispatch failed:`, err.message);
-    }
-  }
-
-  // Terminal Display for Developer Reference & Safety
+  // Terminal display for local testing safety.
   console.log(`\n======================================================`);
   console.log(`📱 OTP GENERATED FOR CITIZEN: +91 ${cleanMobile}`);
-  if (sessionId) {
-    console.log(`🔑 2Factor SMS Session ID: ${sessionId}`);
-  } else {
-    console.log(`🔑 Verification OTP Code: ${otp}`);
-  }
-  if (realDelivered) {
-    console.log(`🚀 Live Cellular Delivery: ${providerName}`);
-  } else {
-    console.log(`ℹ️ Add TWILIO or 2FACTOR credentials in .env for live SMS`);
-  }
+  console.log(`🔑 Verification OTP Code: ${otp}`);
+  console.log(`ℹ️ 2Factor voice call failed, so this OTP is shown only for local testing.`);
   console.log(`======================================================\n`);
 
-  return { success: realDelivered, otp, sessionId, provider: providerName };
+  return { success: false, otp, provider: '2Factor.in OTP Call', channel: 'call' };
+}
+
+async function sendOtpToMobile(mobile, otp) {
+  return await sendOtpCallToMobile(mobile, otp);
+}
+
+function shouldAllowOtpFallback() {
+  return ALLOW_OTP_CONSOLE_FALLBACK || process.env.NODE_ENV !== 'production';
 }
 
 function findMemoryZone(name) {
@@ -611,7 +683,7 @@ async function ensureZone(name, data = {}) {
       $setOnInsert: { name, sanitationStatus: 'pending' },
       $set: data
     },
-    { new: true, upsert: true, runValidators: true }
+    { returnDocument: 'after', upsert: true, runValidators: true }
   );
 }
 
@@ -759,6 +831,38 @@ function buildMemoryHotspots(limit) {
   return typeof limit === 'number' ? hotspots.slice(0, limit) : hotspots;
 }
 
+async function buildHotspots(limit) {
+  if (useMemoryStore()) return buildMemoryHotspots(limit);
+
+  try {
+    const pipeline = [
+      {
+        $group: {
+          _id: { $ifNull: ['$zone', 'Unassigned'] },
+          complaintCount: { $sum: 1 },
+          unresolvedCount: { $sum: { $cond: [{ $ne: ['$status', 'Resolved'] }, 1, 0] } },
+          highPriorityCount: { $sum: { $cond: [{ $in: ['$priority', ['High', 'Critical']] }, 1, 0] } }
+        }
+      },
+      {
+        $addFields: {
+          riskScore: { $add: ['$unresolvedCount', { $multiply: ['$highPriorityCount', 2] }] }
+        }
+      },
+      { $sort: { riskScore: -1, complaintCount: -1 } }
+    ];
+
+    if (typeof limit === 'number') {
+      pipeline.push({ $limit: limit });
+    }
+
+    return await Complaint.aggregate(pipeline);
+  } catch (err) {
+    console.warn('Hotspots aggregation error, fallback to memory calculation:', err.message);
+    return buildMemoryHotspots(limit);
+  }
+}
+
 async function createComplaintRecord(req) {
   const body = req.body || {};
   const category = normalizeCategory(body.category || body.wasteType);
@@ -774,8 +878,7 @@ async function createComplaintRecord(req) {
     throw error;
   }
 
-  const uploadedFiles = req.files && req.files.length ? req.files : (req.file ? [req.file] : []);
-  const uploadedUrls = uploadedFiles.map((f) => `/uploads/complaints/${f.filename}`);
+  const uploadedUrls = await extractAndUploadPhotos(req, 'smartclean/complaints');
   const photos = uploadedUrls.length
     ? uploadedUrls
     : (Array.isArray(body.photos) ? body.photos : (body.photoUrl ? [body.photoUrl] : (body.photo ? [body.photo] : [])));
@@ -956,8 +1059,8 @@ async function updateComplaintStatusById(id, status, assignedTo, extraData = {})
   }
 
   const complaint = isValidObjectId(id)
-    ? await Complaint.findByIdAndUpdate(id, update, { new: true, runValidators: true })
-    : await Complaint.findOneAndUpdate({ complaintId: id }, update, { new: true, runValidators: true });
+    ? await Complaint.findByIdAndUpdate(id, update, { returnDocument: 'after', runValidators: true })
+    : await Complaint.findOneAndUpdate({ complaintId: id }, update, { returnDocument: 'after', runValidators: true });
 
   if (previous.status !== 'Resolved' && normalizedStatus === 'Resolved') {
     await Zone.findOneAndUpdate({ name: complaint.zone }, { $inc: { unresolvedCount: -1 } });
@@ -1040,14 +1143,24 @@ app.post('/api/auth/register', async (req, res) => {
 
     const user = await findOrCreateUser({ name, mobile, email, role: 'citizen' });
     const otp = crypto.randomInt(100000, 1000000).toString();
-    const smsResult = await sendSmsToMobile(mobile, otp);
-    await storeOtp(mobile, otp, smsResult.sessionId);
+    const otpResult = await sendOtpToMobile(mobile, otp);
+
+    if (!otpResult.success && !shouldAllowOtpFallback()) {
+      return jsonError(res, 502, 'Unable to place OTP call right now. Please check 2Factor API key, account balance, and phone number access.');
+    }
+
+    await storeOtp(mobile, otp, otpResult.sessionId);
 
     return jsonSuccess(res, {
-      message: `Verification code sent to +91 ${mobile}`,
+      message: otpResult.success
+        ? `Verification OTP call placed to +91 ${mobile}`
+        : `OTP call could not be placed. Use the server console OTP for local testing.`,
       mobile,
       user: publicUser(user),
-      smsDelivered: smsResult.success
+      otpDelivered: otpResult.success,
+      deliveryChannel: otpResult.channel,
+      fallbackOtp: !otpResult.success,
+      voiceDelivered: otpResult.channel === 'call' && otpResult.success
     }, 201);
   } catch (err) {
     console.error('Register error:', err);
@@ -1066,14 +1179,24 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await findOrCreateUser({ mobile, email, role: 'citizen' });
     const otp = crypto.randomInt(100000, 1000000).toString();
-    const smsResult = await sendSmsToMobile(mobile, otp);
-    await storeOtp(mobile, otp, smsResult.sessionId);
+    const otpResult = await sendOtpToMobile(mobile, otp);
+
+    if (!otpResult.success && !shouldAllowOtpFallback()) {
+      return jsonError(res, 502, 'Unable to place OTP call right now. Please check 2Factor API key, account balance, and phone number access.');
+    }
+
+    await storeOtp(mobile, otp, otpResult.sessionId);
 
     return jsonSuccess(res, {
-      message: `Verification code sent to +91 ${mobile}`,
+      message: otpResult.success
+        ? `Verification OTP call placed to +91 ${mobile}`
+        : `OTP call could not be placed. Use the server console OTP for local testing.`,
       mobile,
       user: publicUser(user),
-      smsDelivered: smsResult.success
+      otpDelivered: otpResult.success,
+      deliveryChannel: otpResult.channel,
+      fallbackOtp: !otpResult.success,
+      voiceDelivered: otpResult.channel === 'call' && otpResult.success
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -1207,7 +1330,7 @@ app.get('/api/complaints/:id', requireCitizen, async (req, res) => {
 
 app.put('/api/complaints/:id', requireAdmin, upload.any(), async (req, res) => {
   try {
-    const uploadedPhotos = (req.files || []).map((file) => `/uploads/complaints/${file.filename}`);
+    const uploadedPhotos = await extractAndUploadPhotos(req, 'smartclean/resolutions');
     let resolutionPhotos = [];
     if (req.body.resolutionPhotos) {
       if (Array.isArray(req.body.resolutionPhotos)) {
@@ -1272,7 +1395,7 @@ app.get('/api/admin/dashboard', requireAdmin, async (req, res) => {
 
 app.put('/api/admin/complaints/:id/status', requireAdmin, upload.any(), async (req, res) => {
   try {
-    const uploadedPhotos = (req.files || []).map((file) => `/uploads/complaints/${file.filename}`);
+    const uploadedPhotos = await extractAndUploadPhotos(req, 'smartclean/resolutions');
     let resolutionPhotos = [];
     if (req.body.resolutionPhotos) {
       if (Array.isArray(req.body.resolutionPhotos)) {
@@ -1312,7 +1435,7 @@ app.put('/api/admin/complaints/:id/status', requireAdmin, upload.any(), async (r
 
 app.put('/api/admin/complaints/:id/resolve', requireAdmin, upload.any(), async (req, res) => {
   try {
-    const uploadedPhotos = (req.files || []).map((file) => `/uploads/complaints/${file.filename}`);
+    const uploadedPhotos = await extractAndUploadPhotos(req, 'smartclean/resolutions');
     let resolutionPhotos = [];
     if (req.body.resolutionPhotos) {
       if (Array.isArray(req.body.resolutionPhotos)) {
@@ -1423,7 +1546,7 @@ app.get('/api/dashboard/summary', requireAdmin, async (req, res) => {
       },
       stats: dashboard.stats,
       wasteTypes: dashboard.categoryStats,
-      hotspots: useMemoryStore() ? buildMemoryHotspots(5) : [],
+      hotspots: await buildHotspots(5),
       recentComplaints: dashboard.recentComplaints
     });
   } catch (err) {
@@ -1460,30 +1583,7 @@ app.get('/api/alerts', requireAdmin, async (req, res) => {
 
 app.get('/api/zones/analysis/hotspots', requireAdmin, async (req, res) => {
   try {
-    if (useMemoryStore()) {
-      return jsonSuccess(res, {
-        hotspots: buildMemoryHotspots(),
-        message: 'Zones ranked by unresolved complaints and priority risk'
-      });
-    }
-
-    const hotspots = await Complaint.aggregate([
-      {
-        $group: {
-          _id: '$zone',
-          complaintCount: { $sum: 1 },
-          unresolvedCount: { $sum: { $cond: [{ $ne: ['$status', 'Resolved'] }, 1, 0] } },
-          highPriorityCount: { $sum: { $cond: [{ $in: ['$priority', ['High', 'Critical']] }, 1, 0] } }
-        }
-      },
-      {
-        $addFields: {
-          riskScore: { $add: ['$unresolvedCount', { $multiply: ['$highPriorityCount', 2] }] }
-        }
-      },
-      { $sort: { riskScore: -1, complaintCount: -1 } }
-    ]);
-
+    const hotspots = await buildHotspots();
     return jsonSuccess(res, {
       hotspots,
       message: 'Zones ranked by unresolved complaints and priority risk'
@@ -1494,6 +1594,7 @@ app.get('/api/zones/analysis/hotspots', requireAdmin, async (req, res) => {
   }
 });
 
+
 app.get('/api/analysis/waste-types', requireAdmin, async (req, res) => {
   try {
     const complaints = (await getAllComplaints({})).map(publicComplaint);
@@ -1503,6 +1604,116 @@ app.get('/api/analysis/waste-types', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Waste analysis error:', err);
     return jsonError(res, 500, 'Unable to generate waste type analysis');
+  }
+});
+
+// Drone Inspection Request Endpoints
+app.get('/api/drone/requests', async (req, res) => {
+  try {
+    if (useMemoryStore()) {
+      return jsonSuccess(res, {
+        total: memoryStore.droneRequests.length,
+        requests: memoryStore.droneRequests
+      });
+    }
+
+    const requests = await DroneRequest.find().sort({ createdAt: -1 });
+    return jsonSuccess(res, {
+      total: requests.length,
+      requests
+    });
+  } catch (err) {
+    console.error('Fetch drone requests error:', err);
+    return jsonError(res, 500, 'Unable to fetch drone inspection requests');
+  }
+});
+
+app.post('/api/drone/requests', async (req, res) => {
+  try {
+    const {
+      id,
+      location,
+      radius,
+      purpose,
+      description,
+      priority,
+      preferredTime,
+      latitude,
+      longitude,
+      status,
+      notes
+    } = req.body || {};
+
+    if (!location || !String(location).trim()) {
+      return jsonError(res, 400, 'Location is required for drone inspection');
+    }
+
+    const requestId = id || `DRN-${Math.floor(100000 + Math.random() * 900000)}`;
+    const formattedRequestedAt = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
+    const requestData = {
+      requestId,
+      location: String(location).trim(),
+      radius: radius || '2 km',
+      purpose: purpose || 'General Inspection',
+      description: String(description || '').trim(),
+      priority: ['Low', 'Medium', 'High', 'Critical'].includes(priority) ? priority : 'Medium',
+      preferredTime: preferredTime || 'Flexible / Next Available',
+      latitude: Number(latitude) || undefined,
+      longitude: Number(longitude) || undefined,
+      status: status || 'Submitted',
+      requestedAt: formattedRequestedAt,
+      notes: notes || ''
+    };
+
+    if (useMemoryStore()) {
+      memoryStore.droneRequests.unshift({ ...requestData, _id: requestId, createdAt: new Date() });
+      return jsonSuccess(res, {
+        message: 'Drone inspection request submitted successfully',
+        request: requestData
+      }, 201);
+    }
+
+    const newRequest = await DroneRequest.create(requestData);
+    return jsonSuccess(res, {
+      message: 'Drone inspection request submitted successfully',
+      request: newRequest
+    }, 201);
+  } catch (err) {
+    console.error('Create drone request error:', err);
+    return jsonError(res, 500, 'Unable to submit drone inspection request');
+  }
+});
+
+app.put('/api/drone/requests/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status, notes } = req.body || {};
+    const validStatuses = ['Submitted', 'Pending Review', 'Scheduled', 'In Progress', 'Completed', 'Rejected'];
+
+    if (!validStatuses.includes(status)) {
+      return jsonError(res, 400, `Invalid status. Allowed: ${validStatuses.join(', ')}`);
+    }
+
+    const update = { status };
+    if (notes !== undefined) update.notes = notes;
+
+    if (useMemoryStore()) {
+      const item = memoryStore.droneRequests.find((r) => r.requestId === id || r._id === id);
+      if (!item) return jsonError(res, 404, 'Drone request not found');
+      Object.assign(item, update, { updatedAt: new Date() });
+      return jsonSuccess(res, { message: 'Status updated', request: item });
+    }
+
+    const request = isValidObjectId(id)
+      ? await DroneRequest.findByIdAndUpdate(id, update, { returnDocument: 'after', runValidators: true })
+      : await DroneRequest.findOneAndUpdate({ requestId: id }, update, { returnDocument: 'after', runValidators: true });
+
+    if (!request) return jsonError(res, 404, 'Drone request not found');
+    return jsonSuccess(res, { message: 'Status updated', request });
+  } catch (err) {
+    console.error('Update drone status error:', err);
+    return jsonError(res, 500, 'Unable to update drone inspection status');
   }
 });
 

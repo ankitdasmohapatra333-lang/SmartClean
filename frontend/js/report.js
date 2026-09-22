@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
+    if (!requireCitizenSession()) return;
 
     /* =========================
        LOCATION
@@ -108,25 +109,42 @@ function getCurrentLocation() {
 
 
             status.textContent =
-                `Location captured: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+                `Location captured: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Resolving address...`;
 
             status.style.color = "#15803d";
-
-
-            /*
-                Save readable location information
-                if a manual location field exists.
-            */
 
             const manualLocation =
                 document.getElementById("location");
 
-            if (manualLocation && !manualLocation.value) {
+            // OpenStreetMap Nominatim Reverse Geocoding for human-readable locality
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`)
+                .then(function (res) { return res.json(); })
+                .then(function (geo) {
+                    if (geo && geo.address) {
+                        const addr = geo.address;
+                        const parts = [
+                            addr.road || addr.suburb || addr.neighbourhood,
+                            addr.city_district || addr.suburb,
+                            addr.city || addr.town || addr.county
+                        ].filter(Boolean);
 
-                manualLocation.value =
-                    `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+                        const cleanAddress = parts.length
+                            ? parts.join(', ')
+                            : (geo.display_name ? geo.display_name.split(',').slice(0, 3).join(', ') : '');
 
-            }
+                        if (cleanAddress && manualLocation) {
+                            manualLocation.value = cleanAddress;
+                            status.textContent = `📍 ${cleanAddress} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+                        }
+                    } else if (manualLocation && !manualLocation.value) {
+                        manualLocation.value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+                    }
+                })
+                .catch(function () {
+                    if (manualLocation && !manualLocation.value) {
+                        manualLocation.value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+                    }
+                });
 
 
             /*

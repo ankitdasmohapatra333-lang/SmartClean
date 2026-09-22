@@ -1463,6 +1463,11 @@ body::after {
     color: var(--blue);
 }
 
+.quick-action-icon.drone {
+    background: #eef2ff;
+    color: #4338ca;
+}
+
 .quick-arrow {
     margin-left: auto;
     color: var(--muted);
@@ -3451,5 +3456,572 @@ body::after {
         right: 16px;
         width: 56px;
         height: 56px;
+    }
+}
+
+/* ========================================================
+   DRONE INSPECTION (FUTURE SCOPE) WORKFLOW STYLES
+   ======================================================== */
+.drone-request-link small,
+.drone-data-btn small {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: rgba(46, 125, 50, 0.15);
+    color: #1b5e20;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.drone-data-btn {
+    border: 1px dashed #94a3b8;
+    background: #f8fafc;
+    color: #64748b;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    cursor: not-allowed;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.drone-page-shell {
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 46px 0 20px;
+}
+
+.drone-hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 26px;
+}
+
+.drone-hero h1 {
+    margin: 8px 0 8px;
+    color: #0f172a;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800;
+}
+
+.drone-hero p {
+    max-width: 760px;
+    margin: 0;
+    color: #64748b;
+    line-height: 1.7;
+}
+
+.drone-hero-status {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    color: #166534;
+    font-size: 0.85rem;
+    font-weight: 800;
+    box-shadow: var(--shadow-sm);
+}
+
+.drone-page-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 24px;
+    align-items: start;
+}
+
+.drone-page-card {
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+    box-shadow: var(--shadow-md);
+}
+
+.drone-page-body .drone-panel-card {
+    animation: none;
+}
+
+.drone-request-form {
+    margin-top: 22px;
+}
+
+.drone-form-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.drone-submit-row .btn-smart {
+    width: auto;
+    min-width: 210px;
+}
+
+.drone-side-panel {
+    display: grid;
+    gap: 18px;
+}
+
+.drone-use-list {
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+}
+
+.drone-use-list li {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+    font-weight: 600;
+}
+
+.drone-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.drone-panel[hidden] {
+    display: none !important;
+}
+
+body.drone-modal-open {
+    overflow: hidden;
+}
+
+.drone-panel-card {
+    background: #ffffff;
+    border-radius: 20px;
+    max-width: 680px;
+    width: 100%;
+    padding: 2.2rem;
+    position: relative;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: droneFadeIn 0.25s ease-out;
+}
+
+@keyframes droneFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.drone-close {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.5rem;
+    background: #f1f5f9;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.drone-close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.drone-future-badge {
+    display: inline-block;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+}
+
+.drone-disclaimer {
+    font-size: 0.84rem;
+    color: #92400e;
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 1.25rem;
+    line-height: 1.4;
+}
+
+.drone-workflow {
+    margin-top: 1.8rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.82rem;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.drone-workflow strong {
+    color: #334155;
+}
+
+.drone-workflow span {
+    font-size: 0.78rem;
+    color: #059669;
+    background: #f0fdf4;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #bbf7d0;
+}
+
+@media (max-width: 900px) {
+    .drone-hero {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .drone-page-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .drone-page-shell {
+        width: min(100% - 22px, 1180px);
+        padding-top: 28px;
+    }
+
+    .drone-page-card {
+        padding: 1.25rem;
+        border-radius: 18px;
+    }
+
+    .drone-submit-row .btn-smart,
+    .drone-submit-row .btn {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   LIVE MONITORING & SKELETON LOADERS
+========================================================= */
+
+.skeleton-stat {
+    color: transparent !important;
+    position: relative;
+    overflow: hidden;
+    background: #e2e8f0;
+    border-radius: 6px;
+    display: inline-block;
+    min-width: 48px;
+    height: 1.2em;
+}
+
+.skeleton-stat::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0,
+        rgba(255, 255, 255, 0.4) 20%,
+        rgba(255, 255, 255, 0.7) 60%,
+        rgba(255, 255, 255, 0)
+    );
+    animation: shimmer 1.6s infinite;
+    content: '';
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.live-pulse-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-green 2s infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 7px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+.hotspots-container {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+/* =========================================================
+   SPARK-STYLE RICH CHATBOT COMPONENTS
+========================================================= */
+
+.chat-timestamp {
+    display: block;
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 4px;
+    text-align: right;
+}
+
+.chat-status-pill {
+    align-self: center;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #059669;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin: 6px 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.chat-day-divider {
+    align-self: center;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 6px 0;
+    background: #e2e8f0;
+    padding: 2px 10px;
+    border-radius: 12px;
+}
+
+.chat-action-btn {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.chat-action-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.chat-action-btn.primary {
+    background: #059669;
+    color: #ffffff;
+    border-color: #059669;
+}
+
+.chat-action-btn.primary:hover {
+    background: #047857;
+}
+
+/* =========================================================
+   SMARTCLEAN ASSISTANT REFRESH
+========================================================= */
+
+.smartclean-chat-toggle-prominent {
+    width: 68px;
+    height: 68px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #0f766e 0%, #16a34a 100%);
+    box-shadow: 0 18px 40px rgba(15, 118, 110, 0.34), 0 0 0 7px rgba(20, 184, 166, 0.14);
+}
+
+.smartclean-chat-toggle-prominent .chat-toggle-inner {
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.chat-toggle-symbol {
+    display: grid;
+    place-items: center;
+    width: 35px;
+    height: 35px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.smartclean-chat-window-prominent {
+    width: 440px;
+    height: 650px;
+    border-radius: 18px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.smartclean-chat-header-prominent {
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.96), rgba(22, 163, 74, 0.96));
+    padding: 15px 16px;
+}
+
+.chat-avatar-prominent {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: 0;
+}
+
+.smartclean-chat-body-prominent {
+    background: linear-gradient(180deg, #f8fafc 0%, #eefbf4 100%);
+}
+
+.chat-muted-line {
+    color: #64748b;
+    font-size: 12.5px;
+}
+
+.chat-command-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.chat-command-card {
+    text-align: left;
+    border: 1px solid #dbeafe;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 10px;
+    color: #0f172a;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.chat-command-card:hover {
+    border-color: #10b981;
+    background: #ecfdf5;
+    transform: translateY(-1px);
+}
+
+.chat-command-card strong,
+.chat-command-card span {
+    display: block;
+}
+
+.chat-command-card strong {
+    font-size: 12.5px;
+    margin-bottom: 3px;
+}
+
+.chat-command-card span {
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.chat-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.chat-help-stack {
+    display: grid;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.chat-help-stack span {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 12px;
+}
+
+.chat-message.bot .chat-msg-avatar,
+.chat-message.user .chat-msg-avatar {
+    font-size: 10px;
+    font-weight: 900;
+}
+
+@media (max-width: 480px) {
+    .smartclean-chat-window-prominent {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    .chat-command-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .smartclean-chat-toggle-prominent {
+        width: 60px;
+        height: 60px;
+        border-radius: 20px;
     }
 }

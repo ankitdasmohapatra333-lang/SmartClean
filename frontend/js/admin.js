@@ -1,5 +1,12 @@
+let adminAutoRefreshTimer = null;
+
 document.addEventListener("DOMContentLoaded", function () {
     loadAdminDashboard();
+    if (!adminAutoRefreshTimer) {
+        adminAutoRefreshTimer = setInterval(function () {
+            loadAdminDashboard(true);
+        }, 30000);
+    }
 });
 
 
@@ -14,7 +21,7 @@ let currentAdminComplaints = [];
    ADMIN DASHBOARD
 ========================================================= */
 
-async function loadAdminDashboard() {
+async function loadAdminDashboard(isBackground) {
 
     if (
         typeof DEMO_MODE !== "undefined" &&
@@ -37,16 +44,26 @@ async function loadAdminDashboard() {
 
         await loadAdminComplaints();
 
+        await loadAdminHotspots();
+
+        const timerEl = document.getElementById("liveRefreshTimer");
+        if (timerEl) {
+            const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            timerEl.textContent = `• Updated ${now}`;
+        }
+
     } catch (error) {
 
-        console.error(
-            "Admin dashboard error:",
-            error
-        );
+        if (!isBackground) {
+            console.error(
+                "Admin dashboard error:",
+                error
+            );
 
-        showAdminError(
-            "Unable to load admin dashboard. Please check the backend connection."
-        );
+            showAdminError(
+                "Unable to load admin dashboard. Please check the backend connection."
+            );
+        }
     }
 }
 
@@ -107,68 +124,72 @@ function loadDemoAdminDashboard() {
 
 function updateAdminStats(data) {
 
-    const totalElement =
-        document.getElementById(
-            "adminTotal"
-        );
+    const totalElement = document.getElementById("adminTotal");
+    const pendingElement = document.getElementById("adminPending");
+    const progressElement = document.getElementById("adminProgress");
+    const resolvedElement = document.getElementById("adminResolved");
 
-    const pendingElement =
-        document.getElementById(
-            "adminPending"
-        );
-
-    const progressElement =
-        document.getElementById(
-            "adminProgress"
-        );
-
-    const resolvedElement =
-        document.getElementById(
-            "adminResolved"
-        );
-
-
-    const total =
-        data.total ??
-        data.totalComplaints ??
-        data.count ??
-        0;
-
-    const pending =
-        data.pending ??
-        data.pendingComplaints ??
-        0;
-
-    const progress =
-        data.progress ??
-        data.inProgress ??
-        data.inProgressComplaints ??
-        0;
-
-    const resolved =
-        data.resolved ??
-        data.resolvedComplaints ??
-        0;
-
+    const stats = (data && data.stats) ? data.stats : (data || {});
+    const total = stats.total ?? data.totalComplaints ?? data.total ?? 0;
+    const pending = stats.pending ?? data.pendingComplaints ?? data.pending ?? 0;
+    const progress = (stats.inProgress || stats.progress) ?? data.inProgressComplaints ?? 0;
+    const resolved = stats.resolved ?? data.resolvedComplaints ?? data.resolved ?? 0;
 
     if (totalElement) {
-        totalElement.textContent =
-            total;
+        totalElement.textContent = total;
+        totalElement.classList.remove("skeleton-stat");
     }
 
     if (pendingElement) {
-        pendingElement.textContent =
-            pending;
+        pendingElement.textContent = pending;
+        pendingElement.classList.remove("skeleton-stat");
     }
 
     if (progressElement) {
-        progressElement.textContent =
-            progress;
+        progressElement.textContent = progress;
+        progressElement.classList.remove("skeleton-stat");
     }
 
     if (resolvedElement) {
-        resolvedElement.textContent =
-            resolved;
+        resolvedElement.textContent = resolved;
+        resolvedElement.classList.remove("skeleton-stat");
+    }
+}
+
+async function loadAdminHotspots() {
+    const container = document.getElementById("adminHotspotsList");
+    if (!container) return;
+
+    try {
+        const res = await apiRequest("/zones/analysis/hotspots", { method: "GET" });
+        const hotspots = (res && res.hotspots) ? res.hotspots : [];
+
+        if (!hotspots.length) {
+            container.innerHTML = '<div class="text-center text-muted small py-3">No active sanitation hotspots identified.</div>';
+            return;
+        }
+
+        container.innerHTML = hotspots.slice(0, 5).map(function (h) {
+            const riskBadge = (h.riskScore >= 4)
+                ? 'badge bg-danger'
+                : (h.riskScore >= 2)
+                ? 'badge bg-warning text-dark'
+                : 'badge bg-info text-dark';
+
+            const borderClass = (h.riskScore >= 4) ? 'border-danger' : 'border-warning';
+
+            return `
+                <div class="d-flex align-items-center justify-content-between p-2 mb-2 rounded bg-light border-start border-3 ${borderClass}">
+                    <div>
+                        <strong class="d-block text-dark small">${h._id || 'Unassigned Zone'}</strong>
+                        <small class="text-muted">${h.complaintCount || 0} total • ${h.unresolvedCount || 0} open issues</small>
+                    </div>
+                    <span class="${riskBadge}">Risk Score: ${h.riskScore || 1}</span>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        container.innerHTML = '<div class="text-center text-muted small py-2">Hotspots analysis synchronized with latest updates.</div>';
     }
 }
 
