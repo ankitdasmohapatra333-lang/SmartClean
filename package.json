@@ -4,6 +4,8 @@
   "description": "SmartClean Waste Management Platform",
   "main": "backend/server.js",
   "scripts": {
+    "postinstall": "npm install --prefix backend",
+    "build": "npm install --prefix backend",
     "start": "node backend/server.js",
     "server": "node backend/server.js",
     "backend": "node backend/server.js"
