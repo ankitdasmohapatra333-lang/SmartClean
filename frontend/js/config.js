@@ -13,16 +13,50 @@
          localStorage.setItem("SMARTCLEAN_API_URL", "http://192.168.1.45:5000/api")
 */
 
+/*
+    Set your deployed Render backend URL here:
+    Example: const RENDER_BACKEND_URL = "https://smartclean.onrender.com";
+*/
+const RENDER_BACKEND_URL = "";
+
 const BACKEND_HOST = "http://localhost:5000";
 
 function getApiBaseUrl() {
-    const custom = localStorage.getItem("SMARTCLEAN_API_URL");
-    if (custom) return custom;
-
-    const hostname = window.location.hostname;
-    if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1" && !hostname.startsWith("file")) {
-        return `http://${hostname}:5000/api`;
+    // 1. Check custom runtime override (via localStorage or window)
+    const custom = (typeof localStorage !== "undefined" && localStorage.getItem("SMARTCLEAN_API_URL"))
+        || (typeof window !== "undefined" && window.SMARTCLEAN_API_URL);
+    if (custom) {
+        const clean = String(custom).trim().replace(/\/$/, "");
+        return /\/api$/i.test(clean) ? clean : `${clean}/api`;
     }
+
+    // 2. Check current browser location
+    if (typeof window !== "undefined" && window.location) {
+        const hostname = window.location.hostname;
+        const port = window.location.port;
+
+        // Local development (localhost / 127.0.0.1)
+        if (hostname === "localhost" || hostname === "127.0.0.1") {
+            return `${BACKEND_HOST}/api`;
+        }
+
+        // Deployed on Render directly (same origin)
+        if (hostname.endsWith("onrender.com") && port !== "5000") {
+            return `${window.location.origin}/api`;
+        }
+
+        // Local network access (LAN IP on port 5000)
+        if (port === "5000") {
+            return `${window.location.origin}/api`;
+        }
+    }
+
+    // 3. Deployed on Vercel: use RENDER_BACKEND_URL
+    if (RENDER_BACKEND_URL && RENDER_BACKEND_URL.trim() !== "") {
+        const clean = RENDER_BACKEND_URL.trim().replace(/\/$/, "");
+        return /\/api$/i.test(clean) ? clean : `${clean}/api`;
+    }
+
     return `${BACKEND_HOST}/api`;
 }
 
